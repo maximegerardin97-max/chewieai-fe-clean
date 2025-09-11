@@ -1,0 +1,4 @@
+node_modules/
+*.sh
+script-local.js
+.DS_Store
