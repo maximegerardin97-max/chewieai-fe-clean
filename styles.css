@@ -817,6 +817,12 @@ body {
   overflow-y: auto;
 }
 
+/* Ensure bottom content isn't obscured by floating chat */
+body { padding-bottom: 140px; }
+.main-container { padding-bottom: 120px; }
+.upload-cards-stack { margin-bottom: 140px; }
+.feedback-content { padding-bottom: 120px; }
+
 /* Inspirations layout */
 .flows {
   display: flex;
