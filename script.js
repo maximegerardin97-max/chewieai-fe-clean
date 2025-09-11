@@ -23,6 +23,15 @@ class DesignRatingApp {
         this.currentConversationId = null; // Current active conversation
         this.mainChatHistory = []; // Centralized main chat history
         
+        // Loading messages for creative feedback
+        this.loadingMessages = [
+            "Looking into our infinite design knowledge",
+            "Coming up with the next Facebook",
+            "Looking into renaissance paintings for inspiration"
+        ];
+        this.currentLoadingIndex = 0;
+        this.loadingInterval = null;
+        
         this.init();
     }
     
@@ -131,6 +140,11 @@ class DesignRatingApp {
                             </div>
                         </div>
                         <div class="chat-section">
+                            <div class="quick-actions" id="quickActions-${cardId}">
+                                <button class="quick-action-btn" data-action="rate this design">Rate this design</button>
+                                <button class="quick-action-btn" data-action="quick UI check">Quick UI check</button>
+                                <button class="quick-action-btn" data-action="find inspirations for this">Find inspirations</button>
+                            </div>
                             <div class="chat-input-container">
                                 <div class="chat-tags" id="chatTags-${cardId}"></div>
                                 <input type="text" class="chat-input" id="chatInput-${cardId}" placeholder="Ask anything">
@@ -146,11 +160,11 @@ class DesignRatingApp {
                     <div class="results-container hidden" id="resultsContainer-${cardId}">
                         <div class="chat-history-container" id="chatHistory-${cardId}">
                             <div class="chat-history-content" id="chatHistoryContent-${cardId}">
-                                <div class="placeholder-text">Upload a design to get AI feedback</div>
+                                <div class="placeholder-text">Coming up with a recommendation</div>
                             </div>
                         </div>
                         <div class="results-content" id="resultsContent-${cardId}">
-                            <div class="placeholder-text">Upload a design to get AI feedback</div>
+                            <div class="placeholder-text">Coming up with a recommendation</div>
                         </div>
                     </div>
                 </div>
@@ -163,6 +177,9 @@ class DesignRatingApp {
         
         this.initializeCard(cardId);
         this.attachCardEventListeners(cardId);
+        
+        // Start rotating loading messages for new card placeholder
+        this.startLoadingMessages(`resultsContent-${cardId}`);
         
         return cardId;
     }
@@ -201,6 +218,17 @@ class DesignRatingApp {
                 this.sendMessage(cardId);
             }
         });
+        
+        // Attach quick action button listeners
+        const quickActions = document.getElementById(`quickActions-${cardId}`);
+        if (quickActions) {
+            quickActions.addEventListener('click', (e) => {
+                if (e.target.classList.contains('quick-action-btn')) {
+                    const action = e.target.getAttribute('data-action');
+                    this.handleQuickAction(action, cardId);
+                }
+            });
+        }
     }
     
     setupEventListeners() {
@@ -353,6 +381,28 @@ class DesignRatingApp {
         
         // Initialize chat in initial state
         this.setChatState('initial-state');
+        
+        // Show message history by default if there are any messages
+        if (this.mainChatHistory.length > 0) {
+            this.showMainChatHistory();
+        } else {
+            // Start rotating loading messages for main chat placeholder
+            this.startLoadingMessages('chatResultsContent');
+        }
+        
+        // Start rotating loading messages for container chat placeholder
+        this.startLoadingMessages('resultsContent-1');
+        
+        // Attach main chat quick action listeners
+        const mainQuickActions = document.getElementById('mainQuickActions');
+        if (mainQuickActions) {
+            mainQuickActions.addEventListener('click', (e) => {
+                if (e.target.classList.contains('quick-action-btn')) {
+                    const action = e.target.getAttribute('data-action');
+                    this.handleMainQuickAction(action);
+                }
+            });
+        }
     }
     
     setChatState(state) {
@@ -385,12 +435,16 @@ class DesignRatingApp {
         // Get tags text and card content
         const tagElements = Array.from(mainChatTags.querySelectorAll('.chat-tag'));
         let tagsText = '';
+        let hasCardTags = false;
         
         for (const tagElement of tagElements) {
             const tagText = tagElement.querySelector('.chat-tag-text').textContent;
-            const cardContent = tagElement.dataset.cardContent;
+            const cardContent = tagElement.cardContent || tagElement.dataset.cardContent;
             const argumentContent = tagElement.dataset.argumentContent;
             const parentCard = tagElement.dataset.parentCard;
+            const fullContext = tagElement.dataset.fullContext;
+            const isAnswerSelection = tagElement.dataset.isAnswerSelection === 'true';
+            
             
             if (argumentContent) {
                 // Include the full argument content for argument tags
@@ -398,13 +452,31 @@ class DesignRatingApp {
             } else if (cardContent) {
                 // Include the full card content for card tags
                 tagsText += `[${tagText}]\n${cardContent}\n\n`;
+                hasCardTags = true;
+            } else if (isAnswerSelection && fullContext) {
+                // Include the full context for answer selections
+                tagsText += `[${tagText}]\n${fullContext}\n\n`;
             } else {
                 // Regular tag text for other tags
                 tagsText += tagText + ' ';
             }
         }
         
-        const fullMessage = tagsText + message;
+        // Handle the two scenarios for card tags
+        let fullMessage;
+        if (hasCardTags && message.trim()) {
+            // Scenario 1: User sends additional message and tags a card
+            // Pass on "message" + "text from the tagged card"
+            fullMessage = message + '\n\n' + tagsText;
+        } else if (hasCardTags && !message.trim()) {
+            // Scenario 2: User just tags the card and sends
+            // Pass on "can you go deeper into" + "text from the tagged card"
+            fullMessage = 'can you go deeper into ' + tagsText;
+        } else {
+            // No card tags, use original behavior
+            fullMessage = tagsText + message;
+        }
+        
         
         if (!fullMessage.trim()) {
             return;
@@ -433,6 +505,12 @@ class DesignRatingApp {
         this.setChatState('expanded-state');
         this.showMainChatResults('AI is analyzing your design...');
         
+        // Start rotating loading messages
+        this.startLoadingMessages('chatResultsContent');
+        
+        // Hide upload card and show response card when using main chat
+        this.hideUploadCardAndShowResponse();
+        
         try {
             // Use first uploaded image if available; otherwise pass null
             let imageUrl = null;
@@ -459,7 +537,18 @@ class DesignRatingApp {
                 conversationId: resultObj.conversationId
             });
             
-            this.showMainChatResults(resultObj.text || 'Analysis complete');
+            // Show response in the response card instead of main chat results
+            this.showResponseInCard(resultObj.text || 'Analysis complete');
+            
+            // Stop loading messages and show final result
+            this.stopLoadingMessages();
+            
+            // Show message history as default in main chat
+            this.showMainChatHistory();
+            
+            // Hide quick action buttons after first message
+            this.hideQuickActionButtons();
+            
             // Check both the AI response and the original message for commands
             this.handleCommand(resultObj.text || '');
             this.handleCommand(fullMessage);
@@ -499,24 +588,28 @@ class DesignRatingApp {
         }
         
         const historyHTML = this.mainChatHistory.map(entry => `
-            <div class="chat-history-entry">
-                <div class="chat-history-header">
-                    <span class="chat-history-card">Card ${entry.cardId}</span>
-                    <span class="chat-history-time">${new Date(entry.timestamp).toLocaleTimeString()}</span>
+            <div class="chat-message user-message">
+                <div class="message-header">
+                    <span class="message-sender">You</span>
+                    <span class="message-time">${new Date(entry.timestamp).toLocaleTimeString()}</span>
                 </div>
-                <div class="chat-history-message">
-                    <strong>You:</strong> ${entry.message}
+                <div class="message-content">${this.cleanTextContent(entry.message)}</div>
             </div>
-                <div class="chat-history-response">
-                    <strong>AI:</strong> ${entry.response.substring(0, 200)}${entry.response.length > 200 ? '...' : ''}
-                        </div>
-                    </div>
+            <div class="chat-message agent-message">
+                <div class="message-header">
+                    <span class="message-sender">AI</span>
+                    <span class="message-time">${new Date(entry.timestamp).toLocaleTimeString()}</span>
+                </div>
+                <div class="message-content">${this.cleanTextContent(entry.response)}</div>
+            </div>
         `).join('');
         
         chatResultsContent.innerHTML = `
             <div class="chat-history-container">
                 <h3>Conversation History</h3>
-                ${historyHTML}
+                <div class="chat-history-content">
+                    ${historyHTML}
+                </div>
             </div>
         `;
     }
@@ -575,7 +668,13 @@ class DesignRatingApp {
         // Handle floating button click
         floatingBtn.addEventListener('click', () => {
             if (currentSelection && currentCardId) {
-                this.addTagToChat(currentCardId, currentSelection);
+                if (currentCardId === 'main') {
+                    // Add to main chat tags
+                    this.addTagToMainChat(currentSelection);
+                } else {
+                    // Add to container chat tags
+                    this.addTagToChat(currentCardId, currentSelection);
+                }
                 this.hideFloatingButton(floatingBtn);
                 // Clear selection
                 window.getSelection().removeAllRanges();
@@ -607,6 +706,9 @@ class DesignRatingApp {
         const chatTags = document.getElementById(`chatTags-${cardId}`);
         if (!chatTags) return;
 
+        // Get the full context where the text was selected from
+        const fullContext = this.getFullContextFromSelection(text);
+        
         const tagElement = document.createElement('div');
         tagElement.className = 'chat-tag';
         tagElement.innerHTML = `
@@ -614,11 +716,69 @@ class DesignRatingApp {
             <button class="chat-tag-remove" title="Remove">×</button>
         `;
 
+        // Store the full context for later use
+        if (fullContext) {
+            tagElement.dataset.fullContext = fullContext;
+            tagElement.dataset.isAnswerSelection = 'true';
+        }
+
         tagElement.querySelector('.chat-tag-remove').addEventListener('click', () => {
             tagElement.remove();
         });
 
         chatTags.appendChild(tagElement);
+    }
+    
+    addTagToMainChat(text) {
+        const mainChatTags = document.getElementById('mainChatTags');
+        if (!mainChatTags) return;
+
+        // Get the full context where the text was selected from
+        const fullContext = this.getFullContextFromSelection(text);
+        
+        const tagElement = document.createElement('div');
+        tagElement.className = 'chat-tag';
+        tagElement.innerHTML = `
+            <span class="chat-tag-text">${this.escapeHtml(text)}</span>
+            <button class="chat-tag-remove" title="Remove">×</button>
+        `;
+
+        // Store the full context for later use
+        if (fullContext) {
+            tagElement.dataset.fullContext = fullContext;
+            tagElement.dataset.isAnswerSelection = 'true';
+        }
+
+        tagElement.querySelector('.chat-tag-remove').addEventListener('click', () => {
+            tagElement.remove();
+            this.updateChatStateAfterTagChange();
+        });
+
+        mainChatTags.appendChild(tagElement);
+        this.updateChatStateAfterTagChange();
+    }
+    
+    // Get full context from the selected text
+    getFullContextFromSelection(selectedText) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return null;
+        
+        const range = selection.getRangeAt(0);
+        const container = range.commonAncestorContainer;
+        
+        // Find the closest content container
+        let contentContainer = container.closest('.dust-card__text') || 
+                             container.closest('.dust-card__content') ||
+                             container.closest('.feedback-content') ||
+                             container.closest('.chat-message .message-content');
+        
+        if (contentContainer) {
+            // Get the full text content, removing HTML tags
+            const fullText = contentContainer.textContent || contentContainer.innerText || '';
+            return fullText.trim();
+        }
+        
+        return null;
     }
     
     updateChatStateAfterTagChange() {
@@ -725,6 +885,7 @@ class DesignRatingApp {
     updateUploadDisplay(cardId, zoneId = null) {
         const cardData = this.cardData.get(cardId);
         const uploadCard = document.getElementById(`card-${cardId}`);
+        const uploadZones = document.querySelector(`#card-${cardId} .upload-zones`);
         
         // Update specific zone if zoneId is provided
         if (zoneId) {
@@ -744,11 +905,63 @@ class DesignRatingApp {
             uploadCard.classList.remove('without-results');
             // Remove initial state when images are present
             uploadCard.classList.remove('initial-state');
+            
+            // Add class to manage additional zones
+            if (uploadZones) {
+                uploadZones.classList.add('has-main-image');
+            }
+            
+            // Hide zones 2 and 3, keep only zone 1 (with image) and show zone 2 as smaller +
+            const zone2 = document.getElementById(`uploadZone-${cardId}-2`);
+            const zone3 = document.getElementById(`uploadZone-${cardId}-3`);
+            
+            if (zone2) {
+                zone2.style.display = 'flex'; // Show as smaller +
+            }
+            if (zone3) {
+                zone3.style.display = 'none'; // Hide completely
+            }
+            
+            // Hide main floating chat when user inserts a screen to analyze
+            const floatingChat = document.getElementById('floatingChat');
+            const chatOpenBtn = document.getElementById('chatOpenBtn');
+            if (floatingChat) {
+                floatingChat.style.display = 'none';
+            }
+            if (chatOpenBtn) {
+                chatOpenBtn.style.display = 'flex';
+            }
         } else {
             uploadCard.classList.add('without-results');
             uploadCard.classList.remove('with-results');
             // Add initial state when no images are present
             uploadCard.classList.add('initial-state');
+            
+            // Remove class and show all zones normally
+            if (uploadZones) {
+                uploadZones.classList.remove('has-main-image');
+            }
+            
+            // Show all zones normally
+            const zone2 = document.getElementById(`uploadZone-${cardId}-2`);
+            const zone3 = document.getElementById(`uploadZone-${cardId}-3`);
+            
+            if (zone2) {
+                zone2.style.display = 'flex';
+            }
+            if (zone3) {
+                zone3.style.display = 'flex';
+            }
+            
+            // Show main floating chat when no images are present
+            const floatingChat = document.getElementById('floatingChat');
+            const chatOpenBtn = document.getElementById('chatOpenBtn');
+            if (floatingChat) {
+                floatingChat.style.display = 'flex';
+            }
+            if (chatOpenBtn) {
+                chatOpenBtn.style.display = 'none';
+            }
         }
     }
     
@@ -818,9 +1031,28 @@ class DesignRatingApp {
         const chatTags = document.getElementById(`chatTags-${cardId}`);
         const message = chatInput.value.trim();
         
-        // Get tags text
-        const tagTexts = Array.from(chatTags.querySelectorAll('.chat-tag-text')).map(tag => tag.textContent);
-        const tagsText = tagTexts.length > 0 ? tagTexts.join(' ') + ' ' : '';
+        // Get tags text and handle answer selections
+        const tagElements = Array.from(chatTags.querySelectorAll('.chat-tag'));
+        let tagsText = '';
+        
+        for (const tagElement of tagElements) {
+            const tagText = tagElement.querySelector('.chat-tag-text').textContent;
+            const cardContent = tagElement.cardContent || tagElement.dataset.cardContent;
+            const fullContext = tagElement.dataset.fullContext;
+            const isAnswerSelection = tagElement.dataset.isAnswerSelection === 'true';
+            
+            if (cardContent) {
+                // Include the full card content for card tags
+                tagsText += `[${tagText}]\n${cardContent}\n\n`;
+            } else if (isAnswerSelection && fullContext) {
+                // Include the full context for answer selections
+                tagsText += `[${tagText}]\n${fullContext}\n\n`;
+            } else {
+                // Regular tag text
+                tagsText += tagText + ' ';
+            }
+        }
+        
         const fullMessage = tagsText + message;
         
         if (!fullMessage.trim()) {
@@ -837,6 +1069,10 @@ class DesignRatingApp {
         // Show processing state in the current card
         this.showResults('AI is analyzing your design...', cardId);
         this.showResultsContainer(cardId);
+        
+        // Start rotating loading messages for this card
+        this.startLoadingMessages(`resultsContent-${cardId}`);
+        
         cardData.isProcessing = true;
 
         // Add a pending entry to the card history immediately
@@ -874,6 +1110,10 @@ class DesignRatingApp {
             }
             this.showCardChatHistory(cardId);
             this.showResults(resultObj.text || 'Analysis complete', cardId);
+            
+            // Stop loading messages for this card
+            this.stopLoadingMessages();
+            
             // Check both the AI response and the original message for commands
             await this.handleCommand(resultObj.text || '');
             await this.handleCommand(fullMessage);
@@ -1518,10 +1758,14 @@ class DesignRatingApp {
     }
     
     // Add card content to main chat
-    addCardToChat(title, content, cardId) {
+    addCardToChat(cardType, content, cardId) {
         const chatTags = document.getElementById(`chatTags-${cardId || this.currentCardId}`);
         if (!chatTags) return;
 
+        // Extract title from content (first line or first sentence)
+        const title = this.extractTitleFromContent(content);
+        
+        
         const tagElement = document.createElement('div');
         tagElement.className = 'chat-tag';
         tagElement.innerHTML = `
@@ -1529,14 +1773,25 @@ class DesignRatingApp {
             <button class="chat-tag-remove" title="Remove">×</button>
         `;
 
+        tagElement.dataset.cardType = cardType;
         tagElement.dataset.cardTitle = title;
-        tagElement.dataset.cardContent = content;
+        // Store content directly as a property to avoid HTML attribute length limits
+        tagElement.cardContent = content;
 
         tagElement.querySelector('.chat-tag-remove').addEventListener('click', () => {
             tagElement.remove();
         });
 
         chatTags.appendChild(tagElement);
+    }
+    
+    // Extract title from card content
+    extractTitleFromContent(content) {
+        // Remove HTML tags and get first line
+        const textContent = content.replace(/<[^>]*>/g, '').trim();
+        const firstLine = textContent.split('\n')[0];
+        // Limit to 100 characters for display (increased from 50)
+        return firstLine.length > 100 ? firstLine.substring(0, 100) + '...' : firstLine;
     }
     
     // Demo function to test the card system
@@ -1697,6 +1952,99 @@ Product: E-commerce App | Industry: Retail | Platform: Web
     }
 
     
+    // Handle quick action for contextual chat (upload cards)
+    handleQuickAction(action, cardId) {
+        const chatInput = document.getElementById(`chatInput-${cardId}`);
+        if (chatInput) {
+            chatInput.value = action;
+            this.sendMessage(cardId);
+        }
+    }
+    
+    // Handle quick action for main chat
+    handleMainQuickAction(action) {
+        const mainChatInput = document.getElementById('chatInput');
+        if (mainChatInput) {
+            mainChatInput.value = action;
+            this.sendMainChatMessage();
+        }
+    }
+    
+    // Hide upload card and show response card when using main chat
+    hideUploadCardAndShowResponse() {
+        const uploadCardsStack = document.getElementById('uploadCardsStack');
+        const feedbackCard = document.getElementById('feedbackCard');
+        
+        if (uploadCardsStack) {
+            uploadCardsStack.style.display = 'none';
+        }
+        
+        if (feedbackCard) {
+            feedbackCard.classList.add('visible');
+            feedbackCard.style.display = 'flex';
+        }
+    }
+    
+    // Show response in the feedback card
+    showResponseInCard(text) {
+        const feedbackContent = document.getElementById('feedbackContent');
+        const feedbackCard = document.getElementById('feedbackCard');
+        
+        if (feedbackCard) {
+            feedbackCard.querySelector('.card-title').textContent = 'AI Response';
+            // Add compact class for smaller size
+            feedbackCard.classList.add('compact');
+        }
+        
+        if (feedbackContent) {
+            // Try to parse and format the text into different card types
+            const parsedContent = this.parseDustOutput(text);
+            
+            if (parsedContent.cards && parsedContent.cards.length > 0) {
+                // Render structured cards
+                feedbackContent.innerHTML = this.renderStructuredCards(parsedContent.cards);
+            } else {
+                // Fallback to plain text display
+                feedbackContent.innerHTML = `<div class="feedback-text">${text}</div>`;
+            }
+        }
+    }
+    
+    // Hide quick action buttons after first message
+    hideQuickActionButtons() {
+        const mainQuickActions = document.getElementById('mainQuickActions');
+        if (mainQuickActions) {
+            mainQuickActions.style.display = 'none';
+        }
+    }
+    
+    // Start rotating loading messages
+    startLoadingMessages(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        // Clear any existing interval
+        this.stopLoadingMessages();
+        
+        // Start with first message
+        this.currentLoadingIndex = 0;
+        element.textContent = this.loadingMessages[this.currentLoadingIndex];
+        
+        // Set up interval to rotate messages every 3 seconds
+        this.loadingInterval = setInterval(() => {
+            this.currentLoadingIndex = (this.currentLoadingIndex + 1) % this.loadingMessages.length;
+            element.textContent = this.loadingMessages[this.currentLoadingIndex];
+        }, 3000);
+    }
+    
+    // Stop rotating loading messages
+    stopLoadingMessages() {
+        if (this.loadingInterval) {
+            clearInterval(this.loadingInterval);
+            this.loadingInterval = null;
+        }
+    }
+
     // Clean text content by removing HTML/markdown and weird characters
     cleanTextContent(text) {
         if (!text) return '';

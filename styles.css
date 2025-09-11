@@ -57,11 +57,36 @@ body {
   display: none; /* Hidden by default */
   flex: 0 0 auto;
   min-width: 300px;
-  max-width: 1000px;
+  max-width: 600px; /* Reduced from 1000px */
+  max-height: 500px; /* Add max height constraint */
 }
 
 .feedback-card.visible {
   display: flex;
+}
+
+/* Make feedback card more compact when used for main chat responses */
+.feedback-card.compact {
+  max-width: 500px; /* Back to original width */
+  max-height: 600px; /* 400px * 1.5 = 50% bigger */
+}
+
+.feedback-card.compact .feedback-content {
+  max-height: 450px; /* 300px * 1.5 = 50% bigger */
+  overflow-y: auto;
+}
+
+/* Agent response container - match inspiration height or 30% bigger */
+.feedback-card:not(.compact) {
+  min-height: 700px; /* Match inspiration container height */
+  max-height: 910px; /* 30% bigger than inspiration (700 * 1.3) */
+}
+
+.feedback-card:not(.compact) .feedback-content {
+  height: 600px; /* Match inspiration content height */
+  max-height: 780px; /* 30% bigger than inspiration content (600 * 1.3) */
+  overflow-y: auto;
+  padding: 20px;
 }
 
 .card-header {
@@ -175,15 +200,25 @@ body {
   overflow: hidden;
 }
 
+/* Make uploaded design 30% bigger than the 50% increase (total 95% bigger than original) */
+.upload-zone.has-image {
+  width: 273px; /* 140px * 1.95 */
+  height: 374px; /* 192px * 1.95 */
+  border: 1px solid #ccc;
+  background: white;
+}
+
+/* Smaller additional upload zones when main zone has image */
+.upload-zones.has-main-image .upload-zone:not(:first-child) {
+  width: 80px;
+  height: 110px;
+}
+
 .upload-zone:hover {
   border-color: #000;
   background: #f8f9ff;
 }
 
-.upload-zone.has-image {
-  border: 1px solid #ccc;
-  background: white;
-}
 
 .upload-content {
   display: flex;
@@ -249,7 +284,7 @@ body {
 .uploaded-image img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 0.2rem;
   cursor: default;
   pointer-events: none;
@@ -576,6 +611,94 @@ body {
   transform: translateY(-1px);
 }
 
+/* Quick Action Buttons */
+.quick-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+.quick-action-btn {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 16px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.quick-action-btn:hover {
+  background: #e9ecef;
+  border-color: #dee2e6;
+  transform: translateY(-1px);
+}
+
+.quick-action-btn:active {
+  transform: translateY(0);
+  background: #dee2e6;
+}
+
+/* Main chat quick actions - positioned above floating chat */
+.main-chat-quick-actions {
+  position: fixed;
+  bottom: 80px; /* Further reduced space above the floating chat */
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  z-index: 1001;
+  max-width: 500px;
+  width: 100%;
+  padding: 0 20px;
+}
+
+.main-chat-quick-actions .quick-action-btn {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 11px;
+  text-align: center;
+  background: white;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive behavior for main chat quick actions */
+@media (max-width: 768px) {
+  .main-chat-quick-actions {
+    bottom: 100px; /* Further reduced space on mobile */
+    padding: 0 10px;
+    gap: 6px;
+  }
+  
+  .main-chat-quick-actions .quick-action-btn {
+    padding: 6px 8px;
+    font-size: 10px;
+  }
+}
+
+/* Contextual chat quick actions - vertical layout */
+.upload-card .quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.upload-card .quick-action-btn {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  text-align: center;
+}
+
 /* Chat Input with Tags */
 .chat-input-container {
   position: relative;
@@ -828,11 +951,20 @@ body { padding-bottom: 140px; }
   display: flex;
   gap: 12px;
   overflow-x: auto;
+  height: 633px; /* Fixed height to match flow-screen height */
+  align-items: flex-start;
+}
+
+/* Inspiration card content styling */
+#inspirationsCard .feedback-content {
+  height: 600px; /* Fixed height for content area */
+  overflow-y: auto;
+  padding: 20px;
 }
 
 .flow-screen {
-  width: 195px;
-  height: 422px;
+  width: 292px;
+  height: 633px;
   border-radius: 12px;
   background: #f0f0f0;
   box-shadow: 0 2px 8px rgba(0,0,0,0.08);
@@ -843,7 +975,7 @@ body { padding-bottom: 140px; }
 .flow-screen img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
 }
 
@@ -855,7 +987,12 @@ body { padding-bottom: 140px; }
 
 /* splitter removed - reverting to simple side-by-side */
 .upload-cards-stack { position: static; top: auto; left: auto; flex: 0 0 560px; }
-#inspirationsCard { flex: 1 1 720px; }
+#inspirationsCard { 
+  flex: 1 1 720px; 
+  min-height: 700px; /* Ensure consistent height */
+  max-height: 700px;
+  overflow-y: auto;
+}
 
 .placeholder-text {
   color: #999;
