@@ -1,0 +1,14 @@
+{
+  "name": "canva",
+  "version": "1.0.0",
+  "main": "script.js",
+  "scripts": {
+    "start": "open index.html",
+    "dev": "python3 -m http.server 8000",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["canvas", "image", "drag-drop", "shadcn", "ui", "ai", "dust"],
+  "author": "",
+  "license": "ISC",
+  "description": "A beautiful image canvas built with ShadCN design principles, connected to Dust.tt AI agent"
+}
