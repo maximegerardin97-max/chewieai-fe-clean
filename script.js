@@ -371,12 +371,16 @@ class DesignRatingApp {
         chatCloseBtn.addEventListener('click', () => {
             floatingChat.style.display = 'none';
             chatOpenBtn.style.display = 'flex';
+            // Hide quick action buttons when main chat is closed
+            this.hideQuickActionButtons();
         });
 
         // Reopen chat
         chatOpenBtn.addEventListener('click', () => {
             floatingChat.style.display = 'flex';
             chatOpenBtn.style.display = 'none';
+            // Show quick action buttons when main chat is reopened (if not already hidden)
+            this.showQuickActionButtons();
         });
         
         // Initialize chat in initial state
@@ -931,6 +935,8 @@ class DesignRatingApp {
             if (chatOpenBtn) {
                 chatOpenBtn.style.display = 'flex';
             }
+            // Hide quick action buttons when main chat is hidden
+            this.hideQuickActionButtons();
         } else {
             uploadCard.classList.add('without-results');
             uploadCard.classList.remove('with-results');
@@ -962,6 +968,8 @@ class DesignRatingApp {
             if (chatOpenBtn) {
                 chatOpenBtn.style.display = 'none';
             }
+            // Show quick action buttons when main chat is shown (if not already hidden)
+            this.showQuickActionButtons();
         }
     }
     
@@ -1315,6 +1323,7 @@ class DesignRatingApp {
             cards.push(currentCard);
         }
         
+        
         return { cards };
     }
     
@@ -1499,6 +1508,7 @@ class DesignRatingApp {
             .replace(/^[•\-]\s+/, '')   // Remove bullet points
             .replace(/^\d+\.\s+/, '')   // Remove numbers
             .replace(/:$/, '')          // Remove trailing colon
+            .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove ** from titles
             .trim();
     }
     
@@ -1627,6 +1637,7 @@ class DesignRatingApp {
         `;
     }
     
+    
     // Render individual argument card
     renderArgumentCard(argument) {
         const argumentClass = `dust-argument dust-argument--${argument.type}`;
@@ -1742,12 +1753,98 @@ class DesignRatingApp {
     
     // Format content with basic markdown-like formatting
     formatContent(content) {
-        return content
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+        // First, handle emoji toggle lists
+        let formattedContent = this.createEmojiToggleLists(content);
+        
+        return formattedContent
+            .replace(/\*\*(.*?)\*\*/g, '$1')                   // Remove bold markers from titles
             .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
             .replace(/\n\n/g, '</p><p>')                       // Paragraphs
             .replace(/\n/g, '<br>')                            // Line breaks
             .replace(/^(.*)$/, '<p>$1</p>');                   // Wrap in paragraph
+    }
+    
+    // Format content without toggle lists (for flow cards)
+    formatContentWithoutToggle(content) {
+        return content
+            .replace(/\*\*(.*?)\*\*/g, '$1')                   // Remove bold markers from titles
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
+            .replace(/\n\n/g, '</p><p>')                       // Paragraphs
+            .replace(/\n/g, '<br>')                            // Line breaks
+            .replace(/^(.*)$/, '<p>$1</p>');                   // Wrap in paragraph
+    }
+    
+    // Create toggle lists for lines starting with emojis
+    createEmojiToggleLists(content) {
+        const lines = content.split('\n');
+        const result = [];
+        let i = 0;
+        
+        while (i < lines.length) {
+            const line = lines[i];
+            
+            // Check if line starts with emoji (expanded regex to catch more emojis)
+            if (line.match(/^[🔴🟢✅🔵🟡🟠⚫⚪🟣]/)) {
+                // Start of emoji list - collect all consecutive emoji lines
+                const emojiLines = [];
+                while (i < lines.length && lines[i].match(/^[🔴🟢✅🔵🟡🟠⚫⚪🟣]/)) {
+                    emojiLines.push(lines[i]);
+                    i++;
+                }
+                
+                // Create toggle list
+                const toggleId = `emoji-list-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                const toggleList = this.createToggleList(toggleId, emojiLines);
+                result.push(toggleList);
+            } else {
+                // Regular line
+                result.push(line);
+                i++;
+            }
+        }
+        
+        return result.join('\n');
+    }
+    
+    // Create HTML for toggle list
+    createToggleList(toggleId, emojiLines) {
+        const emojiCount = emojiLines.length;
+        
+        const listItems = emojiLines.map(line => 
+            `<div class="emoji-list-item">${this.escapeHtml(line)}</div>`
+        ).join('');
+        
+        return `
+            <div class="emoji-toggle-list">
+                <div class="emoji-toggle-header" onclick="app.toggleEmojiList('${toggleId}')">
+                    <span class="emoji-toggle-text">Detailed analysis</span>
+                    <span class="emoji-toggle-count">(${emojiCount} items)</span>
+                    <span class="emoji-toggle-icon" id="icon-${toggleId}">▼</span>
+                </div>
+                <div class="emoji-toggle-content" id="content-${toggleId}" style="display: none;">
+                    ${listItems}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Toggle emoji list visibility
+    toggleEmojiList(toggleId) {
+        const content = document.getElementById(`content-${toggleId}`);
+        const icon = document.getElementById(`icon-${toggleId}`);
+        const container = content?.closest('.emoji-toggle-list');
+        
+        if (content && icon && container) {
+            if (content.style.display === 'none' || content.style.display === '') {
+                content.style.display = 'block';
+                icon.textContent = '▲';
+                container.classList.add('expanded');
+            } else {
+                content.style.display = 'none';
+                icon.textContent = '▼';
+                container.classList.remove('expanded');
+            }
+        }
     }
     
     // Escape HTML for safe attribute usage
@@ -2018,6 +2115,18 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         }
     }
     
+    // Show quick action buttons (only if they haven't been hidden by user interaction)
+    showQuickActionButtons() {
+        const mainQuickActions = document.getElementById('mainQuickActions');
+        if (mainQuickActions) {
+            // Only show if they haven't been permanently hidden (e.g., after first message)
+            // We can check if the main chat has any history to determine this
+            if (this.mainChatHistory.length === 0) {
+                mainQuickActions.style.display = 'flex';
+            }
+        }
+    }
+    
     // Start rotating loading messages
     startLoadingMessages(elementId) {
         const element = document.getElementById(elementId);
@@ -2067,8 +2176,11 @@ Product: E-commerce App | Industry: Retail | Platform: Web
     
     // Format Perplexity content for better display
     formatPerplexityContent(content) {
-        return content
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+        // First, handle emoji toggle lists
+        let formattedContent = this.createEmojiToggleLists(content);
+        
+        return formattedContent
+            .replace(/\*\*(.*?)\*\*/g, '$1')                   // Remove bold markers from titles
             .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
             .replace(/\n\n/g, '</p><p>')                       // Paragraphs
             .replace(/\n/g, '<br>')                            // Line breaks
