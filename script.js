@@ -1759,6 +1759,7 @@ class DesignRatingApp {
         return formattedContent
             .replace(/\*\*(.*?)\*\*/g, '$1')                   // Remove bold markers from titles
             .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #007bff; text-decoration: underline;">$2</a>')  // Convert markdown links to clickable blue links
             .replace(/\n\n/g, '</p><p>')                       // Paragraphs
             .replace(/\n/g, '<br>')                            // Line breaks
             .replace(/^(.*)$/, '<p>$1</p>');                   // Wrap in paragraph
@@ -1769,6 +1770,7 @@ class DesignRatingApp {
         return content
             .replace(/\*\*(.*?)\*\*/g, '$1')                   // Remove bold markers from titles
             .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #007bff; text-decoration: underline;">$2</a>')  // Convert markdown links to clickable blue links
             .replace(/\n\n/g, '</p><p>')                       // Paragraphs
             .replace(/\n/g, '<br>')                            // Line breaks
             .replace(/^(.*)$/, '<p>$1</p>');                   // Wrap in paragraph
@@ -2182,6 +2184,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         return formattedContent
             .replace(/\*\*(.*?)\*\*/g, '$1')                   // Remove bold markers from titles
             .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #007bff; text-decoration: underline;">$2</a>')  // Convert markdown links to clickable blue links
             .replace(/\n\n/g, '</p><p>')                       // Paragraphs
             .replace(/\n/g, '<br>')                            // Line breaks
             .replace(/^(.*)$/, '<p>$1</p>');                   // Wrap in paragraph
