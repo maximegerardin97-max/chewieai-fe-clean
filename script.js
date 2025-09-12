@@ -597,14 +597,14 @@ class DesignRatingApp {
                     <span class="message-sender">You</span>
                     <span class="message-time">${new Date(entry.timestamp).toLocaleTimeString()}</span>
                 </div>
-                <div class="message-content">${this.cleanTextContent(entry.message)}</div>
+                <div class="message-content">${this.formatContent(entry.message)}</div>
             </div>
             <div class="chat-message agent-message">
                 <div class="message-header">
                     <span class="message-sender">AI</span>
                     <span class="message-time">${new Date(entry.timestamp).toLocaleTimeString()}</span>
                 </div>
-                <div class="message-content">${this.cleanTextContent(entry.response)}</div>
+                <div class="message-content">${this.formatContent(entry.response)}</div>
             </div>
         `).join('');
         
@@ -1219,14 +1219,14 @@ class DesignRatingApp {
                     <span class="message-sender">You</span>
                     <span class="message-time">${new Date(entry.timestamp).toLocaleTimeString()}</span>
                 </div>
-                <div class="message-content">${this.cleanTextContent(entry.message)}</div>
+                <div class="message-content">${this.formatContent(entry.message)}</div>
             </div>
             <div class="chat-message agent-message">
                 <div class="message-header">
                     <span class="message-sender">AI</span>
                     <span class="message-time">${new Date(entry.timestamp).toLocaleTimeString()}</span>
                 </div>
-                <div class="message-content">${this.cleanTextContent(entry.response)}</div>
+                <div class="message-content">${this.formatContent(entry.response)}</div>
             </div>
         `).join('');
         
@@ -1812,9 +1812,18 @@ class DesignRatingApp {
     createToggleList(toggleId, emojiLines) {
         const emojiCount = emojiLines.length;
         
-        const listItems = emojiLines.map(line => 
-            `<div class="emoji-list-item">${this.escapeHtml(line)}</div>`
-        ).join('');
+        const listItems = emojiLines.map(line => {
+            // Check if line contains markdown links
+            if (line.includes('[') && line.includes('](') && line.includes(')')) {
+                // Apply link formatting and don't escape HTML
+                const formattedLine = line
+                    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #007bff; text-decoration: underline;">$2</a>');
+                return `<div class="emoji-list-item">${formattedLine}</div>`;
+            } else {
+                // No links, escape HTML normally
+                return `<div class="emoji-list-item">${this.escapeHtml(line)}</div>`;
+            }
+        }).join('');
         
         return `
             <div class="emoji-toggle-list">
