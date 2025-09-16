@@ -2059,7 +2059,13 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         if (!m) return;
 
         const app = m[1].toLowerCase().trim();
-        const flow = m[2].toLowerCase().trim();
+        const flowAndScreens = m[2].toLowerCase().trim();
+        
+        // Parse flow and optional screen numbers
+        // Format: "Duolingo Onboarding" or "Duolingo Onboarding 01, Duolingo Onboarding 02, Duolingo Onboarding 03"
+        const parts = flowAndScreens.split(',').map(p => p.trim());
+        const flow = parts[0]; // First part is always the flow name
+        const screens = parts.length > 1 ? parts.slice(1) : null; // Optional screen numbers
 
         const inspCard = document.getElementById('inspirationsCard');
         const inspContent = document.getElementById('inspirationsContent');
@@ -2067,16 +2073,22 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         if (inspContent) inspContent.innerHTML = '<div class="placeholder-text">Finding best match…</div>';
 
         try {
-            console.debug('[INSPIRATIONS REQUEST]', { app, flow });
+            console.debug('[INSPIRATIONS REQUEST]', { app, flow, screens });
 
-            // Simple call to backend - it handles all mapping now
+            // Call backend with flow and optional screen numbers
             const resp = await fetch(`${this.supabaseUrl}/functions/v1/inspirations`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.supabaseKey}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ recommendation: { app, flow } })
+                body: JSON.stringify({ 
+                    recommendation: { 
+                        app, 
+                        flow,
+                        screens: screens || null // Pass screen numbers if specified
+                    } 
+                })
             });
 
             if (!resp.ok) {
