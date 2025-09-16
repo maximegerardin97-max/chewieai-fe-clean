@@ -2065,7 +2065,12 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         // Format: "Duolingo Onboarding" or "Duolingo Onboarding 01, Duolingo Onboarding 02, Duolingo Onboarding 03"
         const parts = flowAndScreens.split(',').map(p => p.trim());
         const flow = parts[0]; // First part is always the flow name
-        const screens = parts.length > 1 ? parts.slice(1) : null; // Optional screen numbers
+        // Extract trailing numeric tokens from subsequent parts, e.g., "... 01", "... 02"
+        const screenNums = parts.length > 1
+            ? parts.slice(1)
+                .map(p => (p.match(/(\d+)/)?.[1] || '').trim())
+                .filter(Boolean)
+            : null;
 
         const inspCard = document.getElementById('inspirationsCard');
         const inspContent = document.getElementById('inspirationsContent');
@@ -2073,7 +2078,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         if (inspContent) inspContent.innerHTML = '<div class="placeholder-text">Finding best match…</div>';
 
         try {
-            console.debug('[INSPIRATIONS REQUEST]', { app, flow, screens });
+            console.debug('[INSPIRATIONS REQUEST]', { app, flow, screens: screenNums });
 
             // Call backend with flow and optional screen numbers
             const resp = await fetch(`${this.supabaseUrl}/functions/v1/inspirations`, {
@@ -2086,7 +2091,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
                     recommendation: { 
                         app, 
                         flow,
-                        screens: screens || null // Pass screen numbers if specified
+                        screens: screenNums && screenNums.length ? screenNums : null
                     } 
                 })
             });
