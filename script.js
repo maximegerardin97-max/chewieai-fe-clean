@@ -2064,13 +2064,14 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         // Parse flow and optional screen numbers
         // Format: "Duolingo Onboarding" or "Duolingo Onboarding 01, Duolingo Onboarding 02, Duolingo Onboarding 03"
         const parts = flowAndScreens.split(',').map(p => p.trim());
-        const flow = parts[0]; // First part is always the flow name
-        // Extract trailing numeric tokens from subsequent parts, e.g., "... 01", "... 02"
-        const screenNums = parts.length > 1
-            ? parts.slice(1)
-                .map(p => (p.match(/(\d+)/)?.[1] || '').trim())
-                .filter(Boolean)
-            : null;
+        const firstPart = parts[0] || '';
+        const firstNum = firstPart.match(/(\d+)\s*$/)?.[1] || '';
+        const flow = firstPart.replace(/\s*\d+\s*$/, '').trim();
+        // Extract numeric tokens from all subsequent parts
+        const restNums = parts.slice(1)
+            .map(p => (p.match(/(\d+)/)?.[1] || '').trim())
+            .filter(Boolean);
+        const screenNums = [firstNum, ...restNums].filter(Boolean);
 
         const inspCard = document.getElementById('inspirationsCard');
         const inspContent = document.getElementById('inspirationsContent');
