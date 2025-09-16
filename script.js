@@ -11,8 +11,10 @@ const COMMAND_RE = /command\s*:?\s*send\s+([a-z0-9]+)\s+(.+)/i;
 
 class DesignRatingApp {
     constructor() {
-        this.supabaseUrl = 'https://iiolvvdnzrfcffudwocp.supabase.co';
-        this.supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb2x2dmRuenJmY2ZmdWR3b2NwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1MjE4MDAsImV4cCI6MjA3MzA5NzgwMH0.2-e8Scn26fqsR11h-g4avH8MWybwLTtcf3fCN9qAgVw';
+        const cfg = (window && window.AGENT_CFG) ? window.AGENT_CFG : {};
+        this.supabaseUrl = cfg.SUPABASE_URL || '';
+        this.supabaseKey = cfg.SUPABASE_ANON || '';
+        this.chatUrl = cfg.CHAT_URL || '';
         this.uploadedImages = [];
         this.isProcessing = false;
         this.currentCardId = 1;
@@ -22,6 +24,12 @@ class DesignRatingApp {
         this.conversationHistory = new Map(); // cardId -> conversation history
         this.currentConversationId = null; // Current active conversation
         this.mainChatHistory = []; // Centralized main chat history
+        this.chatMemory = []; // last 10 turns (20 messages)
+
+        // Shared settings from LLM Proxy
+        this.currentProvider = null;
+        this.currentModel = null;
+        this.currentSystemPrompt = null;
         
         // Loading messages for creative feedback
         this.loadingMessages = [
@@ -38,6 +46,117 @@ class DesignRatingApp {
     init() {
         this.setupEventListeners();
         this.initializeCard(1); // Initialize the first card
+        // Load shared settings on start
+        this.loadSharedSettings().then((s) => {
+            if (s) {
+                this.currentProvider = s.provider;
+                this.currentModel = s.model;
+                this.currentSystemPrompt = s.systemPrompt;
+            }
+        }).catch(console.error);
+        // Refresh settings when window regains focus
+        window.addEventListener('focus', () => {
+            this.loadSharedSettings().then((s) => {
+                if (s) {
+                    this.currentProvider = s.provider;
+                    this.currentModel = s.model;
+                    this.currentSystemPrompt = s.systemPrompt;
+                }
+            }).catch(console.error);
+        });
+    }
+
+    async loadSharedSettings() {
+        if (!this.supabaseUrl || !this.supabaseKey) return null;
+        const url = `${this.supabaseUrl}/rest/v1/app_settings?select=system_prompt,provider,model&key=eq.default`;
+        const resp = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'apikey': this.supabaseKey,
+                'Authorization': `Bearer ${this.supabaseKey}`,
+                'Accept': 'application/json'
+            }
+        });
+        if (!resp.ok) {
+            console.warn('loadSharedSettings failed', resp.status);
+            return null;
+        }
+        const rows = await resp.json();
+        const row = Array.isArray(rows) ? rows[0] : null;
+        return row ? {
+            systemPrompt: row.system_prompt || '',
+            provider: row.provider || '',
+            model: row.model || ''
+        } : null;
+    }
+
+    appendHistory(userText, assistantText) {
+        if (!userText && !assistantText) return;
+        if (userText) this.chatMemory.push({ role: 'user', content: userText });
+        if (assistantText) this.chatMemory.push({ role: 'assistant', content: assistantText });
+        // Keep last 20 messages (10 turns)
+        if (this.chatMemory.length > 20) {
+            this.chatMemory = this.chatMemory.slice(-20);
+        }
+    }
+
+    getLastHistory(limit = 20) {
+        return this.chatMemory.slice(-limit);
+    }
+
+    async sendChat({ provider, model, systemPrompt, message, history, onDelta, onDone }) {
+        if (!this.chatUrl || !this.supabaseKey) throw new Error('Chat not configured');
+        const body = {
+            provider,
+            model,
+            systemPrompt,
+            message,
+            history: Array.isArray(history) ? history : []
+        };
+        const resp = await fetch(this.chatUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.supabaseKey}`,
+                'apikey': this.supabaseKey,
+            },
+            body: JSON.stringify(body)
+        });
+        if (!resp.ok || !resp.body) {
+            throw new Error(`Chat HTTP ${resp.status}`);
+        }
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+        let fullText = '';
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split(/\n\n|\n/);
+            buffer = lines.pop() || '';
+            for (const line of lines) {
+                const m = line.match(/^data:\s*(.*)$/);
+                if (!m) continue;
+                try {
+                    const evt = JSON.parse(m[1]);
+                    if (evt.type === 'content') {
+                        const delta = evt.delta || evt.content || '';
+                        if (delta) {
+                            fullText += delta;
+                            if (onDelta) onDelta(delta, fullText);
+                        }
+                    } else if (evt.type === 'done') {
+                        if (onDone) onDone(fullText);
+                    }
+                } catch (e) {
+                    // ignore JSON parse errors for keepalive lines
+                }
+            }
+        }
+        // Safety finalization
+        if (onDone) onDone(fullText);
+        return fullText;
     }
     
     // Conversation context management methods
@@ -516,46 +635,45 @@ class DesignRatingApp {
         this.hideUploadCardAndShowResponse();
         
         try {
-            // Use first uploaded image if available; otherwise pass null
+            // Optional image
             let imageUrl = null;
             if (mostRecentCardId) {
                 const cardData = this.cardData.get(mostRecentCardId);
-                const firstKey = Object.keys(cardData.uploadedImages)[0];
-                if (firstKey) {
-                    imageUrl = cardData.uploadedImages[firstKey].url;
-                }
+                const firstKey = cardData ? Object.keys(cardData.uploadedImages)[0] : null;
+                if (firstKey) imageUrl = cardData.uploadedImages[firstKey].url;
             }
-            // Check if this is a follow-up question
-            const isFollowUp = this.isFollowUpQuestion(message);
-            
-            const result = await this.analyzeDesign(fullMessage, imageUrl, mostRecentCardId, isFollowUp);
-            // Normalize result to object { text, conversationId }
-            const resultObj = typeof result === 'string' ? { text: result, conversationId: this.currentConversationId } : result;
-            
-            // Add to main chat history
-            this.mainChatHistory.push({
-                timestamp: new Date().toISOString(),
-                cardId: mostRecentCardId || 'main-chat',
-                message: fullMessage,
-                response: resultObj.text || 'Analysis complete',
-                conversationId: resultObj.conversationId
+            const msgPayload = imageUrl ? [
+                { type: 'text', text: fullMessage },
+                { type: 'image_url', image_url: { url: imageUrl, detail: 'auto' } }
+            ] : fullMessage;
+
+            let streamedText = '';
+            await this.sendChat({
+                provider: this.currentProvider,
+                model: this.currentModel,
+                systemPrompt: this.currentSystemPrompt,
+                message: msgPayload,
+                history: this.getLastHistory(20),
+                onDelta: (delta, full) => {
+                    streamedText = full;
+                    this.showResponseInCard(full);
+                },
+                onDone: (finalText) => {
+                    this.mainChatHistory.push({
+                        timestamp: new Date().toISOString(),
+                        cardId: mostRecentCardId || 'main-chat',
+                        message: fullMessage,
+                        response: finalText || 'Done',
+                        conversationId: null
+                    });
+                    this.appendHistory(fullMessage, finalText || '');
+                    this.stopLoadingMessages();
+                    this.showMainChatHistory();
+                    this.hideQuickActionButtons();
+                    this.handleCommand(finalText || '');
+                    this.handleCommand(fullMessage);
+                }
             });
-            
-            // Show response in the response card instead of main chat results
-            this.showResponseInCard(resultObj.text || 'Analysis complete');
-            
-            // Stop loading messages and show final result
-            this.stopLoadingMessages();
-            
-            // Show message history as default in main chat
-            this.showMainChatHistory();
-            
-            // Hide quick action buttons after first message
-            this.hideQuickActionButtons();
-            
-            // Check both the AI response and the original message for commands
-            this.handleCommand(resultObj.text || '');
-            this.handleCommand(fullMessage);
         } catch (error) {
             console.error('Error:', error);
             this.showMainChatResults('Sorry, I encountered an error. Please try again.');
@@ -1023,9 +1141,26 @@ class DesignRatingApp {
         try {
             // For now, analyze the first image
             const firstImage = cardData.uploadedImages[0];
-            const result = await this.analyzeDesign('Analyze this design', firstImage.url);
-            this.showResults(result, cardId);
-            await this.handleCommand(result);
+            let streamedText = '';
+            const msgPayload = firstImage?.url ? [
+                { type: 'text', text: 'Analyze this design' },
+                { type: 'image_url', image_url: { url: firstImage.url, detail: 'auto' } }
+            ] : 'Analyze this design';
+            await this.sendChat({
+                provider: this.currentProvider,
+                model: this.currentModel,
+                systemPrompt: this.currentSystemPrompt,
+                message: msgPayload,
+                history: this.getLastHistory(20),
+                onDelta: (delta, full) => {
+                    streamedText = full;
+                    this.showResults(full, cardId);
+                },
+                onDone: async (finalText) => {
+                    this.appendHistory('Analyze this design', finalText || '');
+                    await this.handleCommand(finalText || '');
+                }
+            });
         } catch (error) {
             console.error('Error:', error);
             this.showResults('Sorry, I encountered an error. Please try again.', cardId);
@@ -1098,33 +1233,39 @@ class DesignRatingApp {
         this.showCardChatHistory(cardId);
         
         try {
-            // Check if this is a follow-up question
-            const isFollowUp = this.isFollowUpQuestion(message);
-            
-            // Use first uploaded image if present; otherwise null
+            // Prepare multimodal message if image present
             let imageUrl = null;
             const firstKey = Object.keys(cardData.uploadedImages)[0];
-            if (firstKey) {
-                imageUrl = cardData.uploadedImages[firstKey].url;
-            }
-            const result = await this.analyzeDesign(fullMessage, imageUrl, cardId, isFollowUp);
-            // Normalize result to object { text, conversationId }
-            const resultObj = typeof result === 'string' ? { text: result, conversationId: this.currentConversationId } : result;
-            // Update pending entry with final response and conversation id
-            pendingEntry.response = resultObj.text || 'Analysis complete';
-            if (resultObj.conversationId) {
-                pendingEntry.conversationId = resultObj.conversationId;
-                this.currentConversationId = resultObj.conversationId;
-            }
-            this.showCardChatHistory(cardId);
-            this.showResults(resultObj.text || 'Analysis complete', cardId);
-            
-            // Stop loading messages for this card
-            this.stopLoadingMessages();
-            
-            // Check both the AI response and the original message for commands
-            await this.handleCommand(resultObj.text || '');
-            await this.handleCommand(fullMessage);
+            if (firstKey) imageUrl = cardData.uploadedImages[firstKey].url;
+            const msgPayload = imageUrl ? [
+                { type: 'text', text: fullMessage },
+                { type: 'image_url', image_url: { url: imageUrl, detail: 'auto' } }
+            ] : fullMessage;
+
+            let streamedText = '';
+            await this.sendChat({
+                provider: this.currentProvider,
+                model: this.currentModel,
+                systemPrompt: this.currentSystemPrompt,
+                message: msgPayload,
+                history: this.getLastHistory(20),
+                onDelta: (delta, full) => {
+                    streamedText = full;
+                    // live render
+                    const resultsContent = document.getElementById(`resultsContent-${cardId}`);
+                    if (resultsContent) {
+                        resultsContent.innerHTML = `<div class="feedback-text">${this.formatContent(full)}</div>`;
+                    }
+                },
+                onDone: async (finalText) => {
+                    pendingEntry.response = finalText || 'Done';
+                    this.showCardChatHistory(cardId);
+                    this.appendHistory(fullMessage, finalText || '');
+                    this.stopLoadingMessages();
+                    await this.handleCommand(finalText || '');
+                    await this.handleCommand(fullMessage);
+                }
+            });
         } catch (error) {
             console.error('Error:', error);
             this.showResults('Sorry, I encountered an error. Please try again.', cardId);
@@ -1133,66 +1274,7 @@ class DesignRatingApp {
         }
     }
     
-    async analyzeDesign(message, imageUrl, cardId = null, isFollowUp = false) {
-        console.log('🎨 Starting design analysis...', { message, isFollowUp, cardId });
-        
-        try {
-            // Build context for follow-up questions
-            let contextMessage = message;
-            if (isFollowUp && cardId) {
-                const context = this.getConversationContext(cardId);
-                if (context.length > 0) {
-                    const contextSummary = context.map(h => 
-                        `Previous: ${h.message}\nResponse: ${h.response.substring(0, 200)}...`
-                    ).join('\n\n');
-                    contextMessage = `Context from previous conversation:\n${contextSummary}\n\nCurrent question: ${message}`;
-                }
-            }
-            
-            const payload = {
-                action: 'analyze',
-                content: contextMessage,
-                imageUrl: imageUrl,
-                username: 'web-user',
-                timezone: 'UTC'
-            };
-            
-            // Add conversation ID for context if we have one
-            if (this.currentConversationId) {
-                payload.conversationId = this.currentConversationId;
-            }
-            
-            const response = await fetch(`${this.supabaseUrl}/functions/v1/design-brain`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.supabaseKey}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
-            });
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const result = await response.json();
-            console.log('✅ Design analysis complete:', result);
-            
-            if (!result.ok) {
-                throw new Error(result.error?.hint || 'Analysis failed');
-            }
-            
-            // Return structured result; caller will update history and UI
-            return {
-                text: result.data?.text || 'Analysis complete',
-                conversationId: result.data?.conversationId || this.currentConversationId || null,
-            };
-            
-        } catch (error) {
-            console.error('❌ Design analysis failed:', error);
-            throw error;
-        }
-    }
+    // analyzeDesign is now replaced by sendChat usage inside callers
     
     showResultsContainer(cardId) {
         const resultsContainer = document.getElementById(`resultsContainer-${cardId}`);
