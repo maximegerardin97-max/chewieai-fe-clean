@@ -16,92 +16,165 @@
 <body>
     <!-- Main Container -->
     <div class="main-container">
-        <!-- Upload Cards Stack -->
-        <div class="upload-cards-stack" id="uploadCardsStack">
-            <!-- Initial Upload Card -->
-            <div class="upload-card" id="card-1">
-                <div class="card-header">
-                    <h2 class="card-title">Rate my designs</h2>
-                </div>
-                <div class="upload-content-container">
-                    <!-- Left Part: Upload and Chat -->
-                    <div class="upload-section">
-                        <div class="upload-zones">
-                            <div class="upload-zone" id="uploadZone-1-1">
-                                <input type="file" id="imageUpload-1-1" accept="image/*" class="hidden">
-                                <div class="upload-content" id="uploadContent-1-1">
-                                    <div class="plus-icon">+</div>
-                                </div>
-                                <div class="uploaded-image hidden" id="uploadedImage-1-1"></div>
-                                <button class="remove-btn hidden" id="removeBtn-1-1">×</button>
-                            </div>
-                            <div class="upload-zone" id="uploadZone-1-2">
-                                <input type="file" id="imageUpload-1-2" accept="image/*" class="hidden">
-                                <div class="upload-content" id="uploadContent-1-2">
-                                    <div class="plus-icon">+</div>
-                                </div>
-                                <div class="uploaded-image hidden" id="uploadedImage-1-2"></div>
-                                <button class="remove-btn hidden" id="removeBtn-1-2">×</button>
-                            </div>
-                            <div class="upload-zone" id="uploadZone-1-3">
-                                <input type="file" id="imageUpload-1-3" accept="image/*" class="hidden">
-                                <div class="upload-content" id="uploadContent-1-3">
-                                    <div class="plus-icon">+</div>
-                                </div>
-                                <div class="uploaded-image hidden" id="uploadedImage-1-3"></div>
-                                <button class="remove-btn hidden" id="removeBtn-1-3">×</button>
-                            </div>
+        <!-- Analysis Area (Left Side) -->
+        <div class="analysis-area">
+            <!-- Large Image Display Area -->
+            <div class="large-image-display" id="largeImageDisplay">
+                <input type="file" id="largeImageUpload" accept="image/*" class="hidden">
+                <div class="large-image-container">
+                    <div class="large-image-placeholder">
+                        <div class="upload-prompt">
+                            <div class="upload-icon-large">📱</div>
+                            <h3>Upload your design</h3>
+                            <p>Drag and drop an image here or click to browse</p>
                         </div>
-                        <div class="chat-section">
-                            <div class="quick-actions" id="quickActions-1">
-                                <button class="quick-action-btn" data-action="rate this design">Rate this design</button>
-                                <button class="quick-action-btn" data-action="quick UI check">Quick UI check</button>
-                                <button class="quick-action-btn" data-action="find inspirations for this">Find inspirations</button>
-                            </div>
-                            <div class="chat-input-container">
-                                <div class="chat-tags" id="chatTags-1"></div>
-                                <input type="text" class="chat-input" id="chatInput-1" placeholder="Ask anything">
-                            </div>
-                             <button class="send-btn upload-send-btn" id="sendBtn-1">
+                    </div>
+                    <div class="large-image-content hidden" id="largeImageContent">
+                        <img id="largeImage" src="" alt="Uploaded design">
+                        <div class="image-actions">
+                            <button class="image-action-btn" id="removeLargeImage">Remove</button>
+                            <button class="image-action-btn" id="addToChatLarge">Add to chat</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            
+            <!-- Right Card - Feedback -->
+            <div class="feedback-card" id="feedbackCard">
+                <div class="card-header">
+                    <h2 class="card-title">Rating...</h2>
+                </div>
+                <div class="feedback-content" id="feedbackContent">
+                    <div class="placeholder-text">Coming up with a recommendation</div>
+                </div>
+            </div>
+
+            <!-- Inspirations Card (hidden until used) -->
+            <div class="feedback-card" id="inspirationsCard" style="display:none;">
+                <div class="card-header">
+                    <h2 class="card-title">Inspirations</h2>
+                </div>
+                <div class="feedback-content" id="inspirationsContent">
+                    <div class="placeholder-text">We'll suggest relevant flows here.</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat Area (Right Side - Fixed) -->
+        <div class="chat-area" id="chatArea">
+            <!-- Chat Results Area -->
+            <div class="chat-results-area" id="chatResultsArea">
+                <div class="chat-results-content" id="chatResultsContent">
+                    <div class="placeholder-text">Start a conversation...</div>
+                </div>
+            </div>
+            
+            <!-- Chat State -->
+            <div class="chat-state" id="chatState">
+                <!-- Step 0: Initial State -->
+                <div class="chat-step active" id="chatStep0" data-step="0">
+                    <div class="chat-input-container">
+                        <input type="text" id="mainChatInput" placeholder="Ask anything" />
+                        <button class="chat-image-btn" id="chatImageBtn" title="Upload image">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                            </svg>
+                        </button>
+                        <button class="chat-send-btn" id="mainChatSendBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7l5-5 5 5z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Step 1: Image Type -->
+                <div class="chat-step hidden" id="chatStep1" data-step="1">
+                    <div class="step-header">
+                        <h3 class="step-title">Image type?</h3>
+                        <div class="step-actions">
+                            <button class="chat-image-close-btn" id="step1ImageCloseBtn" title="Remove image">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                                </svg>
+                            </button>
+                            <button class="step-next-btn" id="step1NextBtn">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M8.59 16.59L13.17 12L8.59 7.41L10 6l6 6-6 6-1.41-1.41z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="step-options">
+                        <button class="option-tag" data-value="component">Component</button>
+                        <button class="option-tag" data-value="screen">Screen</button>
+                        <button class="option-tag" data-value="flow">Flow</button>
+                    </div>
+                </div>
+                
+                <!-- Step 2: Product Type -->
+                <div class="chat-step hidden" id="chatStep2" data-step="2">
+                    <div class="step-header">
+                        <button class="step-back-btn" id="step2BackBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/>
+                            </svg>
+                        </button>
+                        <h3 class="step-title">Product type?</h3>
+                        <div class="step-actions">
+                            <button class="chat-image-close-btn" id="step2ImageCloseBtn" title="Remove image">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                                </svg>
+                            </button>
+                            <button class="step-next-btn" id="step2NextBtn">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M8.59 16.59L13.17 12L8.59 7.41L10 6l6 6-6 6-1.41-1.41z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="step-options">
+                        <button class="option-tag" data-value="mobile">Mobile</button>
+                        <button class="option-tag" data-value="webapp">WebApp</button>
+                        <button class="option-tag" data-value="ecommerce">Ecommerce</button>
+                    </div>
+                </div>
+                
+                <!-- Step 3: Prompt -->
+                <div class="chat-step hidden" id="chatStep3" data-step="3">
+                    <div class="step-header">
+                        <button class="step-back-btn" id="step3BackBtn">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"/>
+                            </svg>
+                        </button>
+                        <h3 class="step-title">Additional context?</h3>
+                        <div class="step-actions">
+                            <button class="chat-image-close-btn" id="step3ImageCloseBtn" title="Remove image">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                                </svg>
+                            </button>
+                            <button class="step-send-btn" id="step3SendBtn">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7l5-5 5 5z"/>
                                 </svg>
                             </button>
                         </div>
                     </div>
-                    <!-- Right Part: Results -->
-                    <div class="results-container hidden" id="resultsContainer-1">
-                        <div class="chat-history-container" id="chatHistory-1">
-                            <div class="chat-history-content" id="chatHistoryContent-1">
-                                <div class="placeholder-text">Coming up with a recommendation</div>
-                            </div>
-                        </div>
-                        <div class="results-content" id="resultsContent-1">
-                            <div class="placeholder-text">Looking into our infinite design knowledge</div>
-                        </div>
+                    <div class="step-input-container">
+                        <input type="text" id="step3Input" placeholder="Ask anything" />
                     </div>
+                </div>
+                
+                <!-- Progress Bar -->
+                <div class="chat-progress-bar">
+                    <div class="progress-fill" id="chatProgressFill"></div>
                 </div>
             </div>
         </div>
-        <!-- Right Card - Feedback -->
-        <div class="feedback-card" id="feedbackCard">
-            <div class="card-header">
-                <h2 class="card-title">Rating...</h2>
-            </div>
-            <div class="feedback-content" id="feedbackContent">
-                <div class="placeholder-text">Coming up with a recommendation</div>
-            </div>
-        </div>
-
-        <!-- Inspirations Card (hidden until used) -->
-        <div class="feedback-card" id="inspirationsCard" style="display:none;">
-            <div class="card-header">
-                <h2 class="card-title">Inspirations</h2>
-            </div>
-            <div class="feedback-content" id="inspirationsContent">
-                <div class="placeholder-text">We’ll suggest relevant flows here.</div>
-            </div>
-        
     </div>
     
     <!-- Main Chat Quick Actions -->
@@ -111,8 +184,8 @@
         <button class="quick-action-btn" data-action="how to increase retention on my dating app?">Dating retention</button>
     </div>
     
-    <!-- Floating Chat Input -->
-    <div class="floating-chat" id="floatingChat">
+    <!-- Legacy Floating Chat Input (Hidden) -->
+    <div class="floating-chat hidden" id="floatingChat">
         <div class="chat-header">
             <span class="chat-title">Conversation</span>
             <button class="chat-toggle-btn" id="chatToggleBtn">
@@ -152,25 +225,9 @@
     
     <!-- Floating Selection Button -->
     <button class="selection-floating-btn" id="selectionFloatingBtn">Add to chat</button>
-    <!-- Reopen chat FAB (hidden by default) -->
-    <button class="chat-open-fab" id="chatOpenBtn" style="display:none;" title="Open chat">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7l5-5 5 5z"/>
-        </svg>
-    </button>
     
     <!-- Training Data Link -->
     <a href="#" class="training-data-link" id="trainingDataLink">training data</a>
-    
-    <!-- Debug Segmented Control -->
-    <div class="debug-controls">
-        <div class="debug-segmented-control">
-            <button class="debug-segment active" data-state="initial-state">Initial</button>
-            <button class="debug-segment" data-state="initial-state-with-tag">With Tag</button>
-            <button class="debug-segment" data-state="expanded-state">Expanded</button>
-            <button class="debug-segment" data-state="collapsed-state">Collapsed</button>
-        </div>
-    </div>
     
     <!-- Training Data Modal -->
     <div class="modal-overlay" id="trainingDataModal">
@@ -206,4 +263,5 @@
     
     <script src="script.js"></script>
 </body>
+</html>
 </html>

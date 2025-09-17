@@ -17,8 +17,6 @@ class DesignRatingApp {
         this.chatUrl = cfg.CHAT_URL || '';
         this.uploadedImages = [];
         this.isProcessing = false;
-        this.currentCardId = 1;
-        this.cardData = new Map(); // Store data for each card
         
         // Conversation context management
         this.conversationHistory = new Map(); // cardId -> conversation history
@@ -45,7 +43,9 @@ class DesignRatingApp {
     
     init() {
         this.setupEventListeners();
-        this.initializeCard(1); // Initialize the first card
+        this.setupDarkModeSupport(); // Setup dark mode support
+        this.setupLargeImageDisplay(); // Setup large image display
+        this.setupChatStates(); // Setup chat states
         // Load shared settings on start
         this.loadSharedSettings().then((s) => {
             if (s) {
@@ -64,6 +64,500 @@ class DesignRatingApp {
                 }
             }).catch(console.error);
         });
+    }
+
+    setupDarkModeSupport() {
+        // Check if the browser supports prefers-color-scheme
+        if (window.matchMedia) {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+            
+            // Function to handle theme changes
+            const handleThemeChange = (e) => {
+                // The CSS custom properties will automatically update based on the media query
+                // This function can be used for any additional JavaScript-based theme handling
+                console.log('Theme changed to:', e.matches ? 'dark' : 'light');
+            };
+            
+            // Listen for theme changes
+            mediaQuery.addEventListener('change', handleThemeChange);
+            
+            // Initial theme check
+            handleThemeChange(mediaQuery);
+        }
+    }
+
+    setupLargeImageDisplay() {
+        const largeImageDisplay = document.getElementById('largeImageDisplay');
+        const largeImageUpload = document.getElementById('largeImageUpload');
+        const largeImagePlaceholder = document.querySelector('.large-image-placeholder');
+        const largeImageContent = document.getElementById('largeImageContent');
+        const largeImage = document.getElementById('largeImage');
+        const removeLargeImage = document.getElementById('removeLargeImage');
+        const addToChatLarge = document.getElementById('addToChatLarge');
+
+        // Click to upload
+        largeImagePlaceholder.addEventListener('click', () => {
+            largeImageUpload.click();
+        });
+
+        // File input change
+        largeImageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                this.handleLargeImageUpload(file);
+            }
+        });
+
+        // Drag and drop
+        largeImageDisplay.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            largeImageDisplay.classList.add('drag-over');
+        });
+
+        largeImageDisplay.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            largeImageDisplay.classList.remove('drag-over');
+        });
+
+        largeImageDisplay.addEventListener('drop', (e) => {
+            e.preventDefault();
+            largeImageDisplay.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                this.handleLargeImageUpload(file);
+            }
+        });
+
+        // Remove image
+        removeLargeImage.addEventListener('click', () => {
+            this.removeLargeImage();
+        });
+
+        // Add to chat
+        addToChatLarge.addEventListener('click', () => {
+            const imageSrc = largeImage.src;
+            if (imageSrc) {
+                this.addImageToMainChat(imageSrc, 'Uploaded design');
+            }
+        });
+    }
+
+    handleLargeImageUpload(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const imageDataUrl = e.target.result;
+            this.displayLargeImage(imageDataUrl, file.name);
+            
+        };
+        reader.readAsDataURL(file);
+    }
+
+    displayLargeImage(imageDataUrl, filename) {
+        const largeImagePlaceholder = document.querySelector('.large-image-placeholder');
+        const largeImageContent = document.getElementById('largeImageContent');
+        const largeImage = document.getElementById('largeImage');
+        const largeImageDisplay = document.getElementById('largeImageDisplay');
+
+        // Hide placeholder and show image
+        largeImagePlaceholder.classList.add('hidden');
+        largeImageContent.classList.remove('hidden');
+        
+        // Set image source
+        largeImage.src = imageDataUrl;
+        largeImage.alt = filename;
+        
+        // Adjust container size based on image dimensions
+        largeImage.onload = () => {
+            this.adjustImageContainerSize(largeImage, largeImageDisplay);
+        };
+    }
+
+    adjustImageContainerSize(image, container) {
+        const imageAspectRatio = image.naturalWidth / image.naturalHeight;
+        const maxWidth = 500;
+        const maxHeight = 80 * window.innerHeight / 100; // 80vh in pixels
+        const minWidth = 300;
+        const minHeight = 400;
+        
+        let containerWidth, containerHeight;
+        
+        // Calculate dimensions based on aspect ratio
+        if (imageAspectRatio > 1) {
+            // Landscape image
+            containerWidth = Math.min(maxWidth, Math.max(minWidth, image.naturalWidth * 0.8));
+            containerHeight = containerWidth / imageAspectRatio + 40; // Add padding
+        } else {
+            // Portrait or square image
+            containerHeight = Math.min(maxHeight, Math.max(minHeight, image.naturalHeight * 0.8));
+            containerWidth = containerHeight * imageAspectRatio + 40; // Add padding
+        }
+        
+        // Ensure minimum dimensions
+        containerWidth = Math.max(minWidth, containerWidth);
+        containerHeight = Math.max(minHeight, containerHeight);
+        
+        // Apply the calculated dimensions
+        container.style.width = `${containerWidth}px`;
+        container.style.height = `${containerHeight}px`;
+    }
+
+    removeLargeImage() {
+        const largeImagePlaceholder = document.querySelector('.large-image-placeholder');
+        const largeImageContent = document.getElementById('largeImageContent');
+        const largeImage = document.getElementById('largeImage');
+        const largeImageUpload = document.getElementById('largeImageUpload');
+        const largeImageDisplay = document.getElementById('largeImageDisplay');
+
+        // Show placeholder and hide image
+        largeImagePlaceholder.classList.remove('hidden');
+        largeImageContent.classList.add('hidden');
+        
+        // Clear image source
+        largeImage.src = '';
+        largeImage.alt = '';
+        
+        // Clear file input
+        largeImageUpload.value = '';
+        
+        // Reset container to default size
+        largeImageDisplay.style.width = '';
+        largeImageDisplay.style.height = '';
+        
+    }
+
+    setupChatStates() {
+        const mainChatInput = document.getElementById('mainChatInput');
+        const mainChatSendBtn = document.getElementById('mainChatSendBtn');
+        const chatImageBtn = document.getElementById('chatImageBtn');
+        
+        // Step navigation buttons
+        const step1NextBtn = document.getElementById('step1NextBtn');
+        const step2BackBtn = document.getElementById('step2BackBtn');
+        const step2NextBtn = document.getElementById('step2NextBtn');
+        const step3BackBtn = document.getElementById('step3BackBtn');
+        const step3SendBtn = document.getElementById('step3SendBtn');
+        const step3Input = document.getElementById('step3Input');
+
+        // Handle initial state input
+        mainChatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.sendMainChatMessage();
+            }
+        });
+
+        mainChatSendBtn.addEventListener('click', () => {
+            this.sendMainChatMessage();
+        });
+
+        // Handle image upload in chat
+        chatImageBtn.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    this.handleChatImageUpload(file);
+                    this.goToStep(1); // Move to step 1 when image is uploaded
+                }
+            };
+            input.click();
+        });
+
+        // Step navigation
+        step1NextBtn.addEventListener('click', () => {
+            this.goToStep(2);
+        });
+
+        step2BackBtn.addEventListener('click', () => {
+            this.goToStep(1);
+        });
+
+        step2NextBtn.addEventListener('click', () => {
+            this.goToStep(3);
+        });
+
+        step3BackBtn.addEventListener('click', () => {
+            this.goToStep(2);
+        });
+
+        step3SendBtn.addEventListener('click', () => {
+            this.sendStep3Message();
+        });
+
+        step3Input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.sendStep3Message();
+            }
+        });
+
+        // Handle option tag selection
+        this.setupOptionTags();
+        
+        // Handle image close buttons
+        this.setupImageCloseButtons();
+    }
+
+    goToStep(stepNumber) {
+        // Hide all steps
+        document.querySelectorAll('.chat-step').forEach(step => {
+            step.classList.add('hidden');
+            step.classList.remove('active');
+        });
+
+        // Show target step
+        const targetStep = document.getElementById(`chatStep${stepNumber}`);
+        if (targetStep) {
+            targetStep.classList.remove('hidden');
+            targetStep.classList.add('active');
+        }
+
+        // Update progress bar
+        this.updateProgressBar(stepNumber);
+    }
+
+
+    updateProgressBar(stepNumber) {
+        const progressFill = document.getElementById('chatProgressFill');
+        if (!progressFill) return;
+
+        let progress = 0;
+        switch (stepNumber) {
+            case 0:
+                progress = 0;
+                break;
+            case 1:
+                progress = 33;
+                break;
+            case 2:
+                progress = 66;
+                break;
+            case 3:
+                progress = 100;
+                break;
+        }
+
+        progressFill.style.width = `${progress}%`;
+    }
+
+    setupOptionTags() {
+        // Handle option tag clicks
+        document.querySelectorAll('.option-tag').forEach(tag => {
+            tag.addEventListener('click', (e) => {
+                const step = e.target.closest('.chat-step');
+                const stepOptions = step.querySelectorAll('.option-tag');
+                
+                // Remove selected class from all options in this step
+                stepOptions.forEach(option => option.classList.remove('selected'));
+                
+                // Add selected class to clicked option
+                e.target.classList.add('selected');
+            });
+        });
+    }
+
+    sendStep3Message() {
+        const step3Input = document.getElementById('step3Input');
+        const message = step3Input.value.trim();
+        if (message) {
+            // Collect all selected options
+            const imageType = this.getSelectedOption('chatStep1');
+            const productType = this.getSelectedOption('chatStep2');
+            const context = message;
+
+            // Create comprehensive message
+            const fullMessage = `Image type: ${imageType}, Product type: ${productType}, Context: ${context}`;
+            
+            // Send the message
+            this.sendMainChatMessage(fullMessage);
+            
+            // Clear input
+            step3Input.value = '';
+            
+            // Reset to initial state
+            this.goToStep(0);
+        }
+    }
+
+    getSelectedOption(stepId) {
+        const step = document.getElementById(stepId);
+        const selectedTag = step.querySelector('.option-tag.selected');
+        return selectedTag ? selectedTag.dataset.value : '';
+    }
+
+    setupImageCloseButtons() {
+        // Handle image close buttons for each step
+        const closeButtons = [
+            'step1ImageCloseBtn',
+            'step2ImageCloseBtn', 
+            'step3ImageCloseBtn'
+        ];
+
+        closeButtons.forEach(buttonId => {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.addEventListener('click', () => {
+                    this.removeUploadedImage();
+                });
+            }
+        });
+    }
+
+
+    removeUploadedImage() {
+        // Clear uploaded image data
+        this.uploadedImageData = null;
+        
+        // Remove image from large image display area
+        this.removeLargeImage();
+        
+        // Reset all option selections
+        document.querySelectorAll('.option-tag').forEach(tag => {
+            tag.classList.remove('selected');
+        });
+        
+        // Clear step 3 input
+        const step3Input = document.getElementById('step3Input');
+        if (step3Input) {
+            step3Input.value = '';
+        }
+        
+        // Return to initial state
+        this.goToStep(0);
+        
+        console.log('Image removed, returned to initial state');
+    }
+
+
+    sendMainChatMessage(customMessage = null) {
+        const mainChatInput = document.getElementById('mainChatInput');
+        const message = customMessage || mainChatInput.value.trim();
+        if (message) {
+            // Add message to chat results
+            this.addMessageToChat(message, 'user');
+            if (!customMessage) {
+                mainChatInput.value = '';
+            }
+            
+            // Simulate AI response
+            setTimeout(() => {
+                this.addMessageToChat('I received your message: "' + message + '"', 'assistant');
+            }, 1000);
+        }
+    }
+
+    addMessageToChat(message, sender) {
+        const chatResultsArea = document.getElementById('chatResultsArea');
+        const chatResultsContent = document.getElementById('chatResultsContent');
+        
+        // Show chat results area
+        chatResultsArea.classList.add('show');
+        
+        // Remove placeholder if it exists
+        const placeholder = chatResultsContent.querySelector('.placeholder-text');
+        if (placeholder) {
+            placeholder.remove();
+        }
+
+        // Create message element
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${sender}-message`;
+        messageDiv.innerHTML = `
+            <div class="message-content">${message}</div>
+            <div class="message-time">${new Date().toLocaleTimeString()}</div>
+        `;
+        
+        chatResultsContent.appendChild(messageDiv);
+        chatResultsContent.scrollTop = chatResultsContent.scrollHeight;
+        
+        // Trigger analysis for user messages
+        if (sender === 'user') {
+            this.triggerAnalysis(message);
+        }
+    }
+
+    async triggerAnalysis(message) {
+        try {
+            // Show loading message
+            this.addMessageToChat('Analyzing your request...', 'assistant');
+            
+            // Prepare the message payload
+            let msgPayload = message;
+            
+            // Add image data if available
+            if (this.uploadedImageData) {
+                msgPayload = [
+                    { type: 'text', text: message },
+                    { type: 'image_url', image_url: { url: this.uploadedImageData.dataUrl, detail: 'auto' } }
+                ];
+            }
+            
+            // Call the analysis API
+            let response = '';
+            await this.sendChat({
+                provider: this.currentProvider,
+                model: this.currentModel,
+                systemPrompt: this.currentSystemPrompt,
+                message: msgPayload,
+                history: this.getLastHistory(20),
+                onDelta: (delta, full) => {
+                    response = full;
+                },
+                onDone: async (finalText) => {
+                    response = finalText || 'Done';
+                }
+            });
+            
+            // Remove the loading message
+            const chatResultsContent = document.getElementById('chatResultsContent');
+            const loadingMessage = chatResultsContent.querySelector('.assistant-message:last-child');
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+            
+            // Display the response
+            if (response) {
+                this.addMessageToChat(response, 'assistant');
+            } else {
+                this.addMessageToChat('Sorry, I couldn\'t process your request. Please try again.', 'assistant');
+            }
+            
+        } catch (error) {
+            console.error('Analysis error:', error);
+            this.addMessageToChat('Sorry, there was an error processing your request. Please try again.', 'assistant');
+        }
+    }
+
+    handleChatImageUpload(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const imageDataUrl = e.target.result;
+            
+            // Store the image data for use in the analysis
+            this.uploadedImageData = {
+                dataUrl: imageDataUrl,
+                filename: file.name
+            };
+            
+            // Display the image in the large image area on the left
+            this.displayLargeImage(imageDataUrl, file.name);
+            
+            
+            console.log('Image uploaded:', file.name);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    updateChatWithStreamingContent(content, cardId) {
+        // For now, just log the streaming content
+        // In a real implementation, this would display in a separate results area
+        console.log('Streaming content:', content);
+    }
+
+    displayResultsInChat(parsedContent, text, cardId) {
+        // For now, just log the results
+        // In a real implementation, this would display in a separate results area
+        console.log('Results:', text);
     }
 
     async loadSharedSettings() {
@@ -207,152 +701,10 @@ class DesignRatingApp {
     }
 
     
-    initializeCard(cardId) {
-        this.cardData.set(cardId, {
-            uploadedImages: {}, // Object to store images by zone ID
-            isProcessing: false
-        });
-        
-        // Add initial state class to the upload card
-        const uploadCard = document.getElementById(`card-${cardId}`);
-        if (uploadCard) {
-            uploadCard.classList.add('initial-state');
-        }
-    }
     
-    createNewCard() {
-        this.currentCardId++;
-        const cardId = this.currentCardId;
-        
-        const cardHTML = `
-            <div class="upload-card" id="card-${cardId}">
-                <div class="card-header">
-                    <h2 class="card-title">Rate my designs</h2>
-                </div>
-                <div class="upload-content-container">
-                    <!-- Left Part: Upload and Chat -->
-                    <div class="upload-section">
-                        <div class="upload-zones">
-                            <div class="upload-zone" id="uploadZone-${cardId}-1">
-                                <input type="file" id="imageUpload-${cardId}-1" accept="image/*" class="hidden">
-                                <div class="upload-content" id="uploadContent-${cardId}-1">
-                                    <div class="plus-icon">+</div>
-                                </div>
-                                <div class="uploaded-image hidden" id="uploadedImage-${cardId}-1"></div>
-                                <button class="remove-btn hidden" id="removeBtn-${cardId}-1">×</button>
-                            </div>
-                            <div class="upload-zone" id="uploadZone-${cardId}-2">
-                                <input type="file" id="imageUpload-${cardId}-2" accept="image/*" class="hidden">
-                                <div class="upload-content" id="uploadContent-${cardId}-2">
-                                    <div class="plus-icon">+</div>
-                                </div>
-                                <div class="uploaded-image hidden" id="uploadedImage-${cardId}-2"></div>
-                                <button class="remove-btn hidden" id="removeBtn-${cardId}-2">×</button>
-                            </div>
-                            <div class="upload-zone" id="uploadZone-${cardId}-3">
-                                <input type="file" id="imageUpload-${cardId}-3" accept="image/*" class="hidden">
-                                <div class="upload-content" id="uploadContent-${cardId}-3">
-                                    <div class="plus-icon">+</div>
-                                </div>
-                                <div class="uploaded-image hidden" id="uploadedImage-${cardId}-3"></div>
-                                <button class="remove-btn hidden" id="removeBtn-${cardId}-3">×</button>
-                            </div>
-                        </div>
-                        <div class="chat-section">
-                            <div class="quick-actions" id="quickActions-${cardId}">
-                                <button class="quick-action-btn" data-action="rate this design">Rate this design</button>
-                                <button class="quick-action-btn" data-action="quick UI check">Quick UI check</button>
-                                <button class="quick-action-btn" data-action="find inspirations for this">Find inspirations</button>
-                            </div>
-                            <div class="chat-input-container">
-                                <div class="chat-tags" id="chatTags-${cardId}"></div>
-                                <input type="text" class="chat-input" id="chatInput-${cardId}" placeholder="Ask anything">
-                            </div>
-                            <button class="send-btn upload-send-btn" id="sendBtn-${cardId}">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7l5-5 5 5z"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                    <!-- Right Part: Results -->
-                    <div class="results-container hidden" id="resultsContainer-${cardId}">
-                        <div class="chat-history-container" id="chatHistory-${cardId}">
-                            <div class="chat-history-content" id="chatHistoryContent-${cardId}">
-                                <div class="placeholder-text">Coming up with a recommendation</div>
-                            </div>
-                        </div>
-                        <div class="results-content" id="resultsContent-${cardId}">
-                            <div class="placeholder-text">Coming up with a recommendation</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        const uploadCardsStack = document.getElementById('uploadCardsStack');
-        // Append new analysis cards below the first one (keep the first/top card oldest)
-        uploadCardsStack.insertAdjacentHTML('beforeend', cardHTML);
-        
-        this.initializeCard(cardId);
-        this.attachCardEventListeners(cardId);
-        
-        // Start rotating loading messages for new card placeholder
-        this.startLoadingMessages(`resultsContent-${cardId}`);
-        
-        return cardId;
-    }
     
-    attachCardEventListeners(cardId) {
-        // Attach listeners to each of the 3 upload zones
-        for (let i = 1; i <= 3; i++) {
-            const imageUpload = document.getElementById(`imageUpload-${cardId}-${i}`);
-            const uploadZone = document.getElementById(`uploadZone-${cardId}-${i}`);
-            const removeBtn = document.getElementById(`removeBtn-${cardId}-${i}`);
-            
-            imageUpload.addEventListener('change', (e) => this.handleFileUpload(e, cardId, i));
-            uploadZone.addEventListener('click', (e) => {
-                // Only trigger file input if clicking on the upload content area, not on uploaded images or buttons
-                if (e.target.closest('.upload-content') && !e.target.closest('.uploaded-image') && !e.target.closest('.remove-btn') && !e.target.closest('.image-action-btn')) {
-                    imageUpload.click();
-                }
-            });
-            uploadZone.addEventListener('dragover', (e) => this.handleDragOver(e));
-            uploadZone.addEventListener('dragleave', (e) => this.handleDragLeave(e));
-            uploadZone.addEventListener('drop', (e) => this.handleDrop(e, cardId, i));
-            removeBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent triggering upload zone click
-                this.removeImage(cardId, i);
-            });
-        }
-        
-        // Attach chat input listener
-        const chatInput = document.getElementById(`chatInput-${cardId}`);
-        const sendBtn = document.getElementById(`sendBtn-${cardId}`);
-        
-        sendBtn.addEventListener('click', () => this.sendMessage(cardId));
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                this.sendMessage(cardId);
-            }
-        });
-        
-        // Attach quick action button listeners
-        const quickActions = document.getElementById(`quickActions-${cardId}`);
-        if (quickActions) {
-            quickActions.addEventListener('click', (e) => {
-                if (e.target.classList.contains('quick-action-btn')) {
-                    const action = e.target.getAttribute('data-action');
-                    this.handleQuickAction(action, cardId);
-                }
-            });
-        }
-    }
     
     setupEventListeners() {
-        // Attach listeners to the first card
-        this.attachCardEventListeners(1);
         
         // Paste functionality (global)
         document.addEventListener('paste', (e) => this.handlePaste(e));
@@ -456,7 +808,6 @@ class DesignRatingApp {
         const historyBtn = document.getElementById('historyBtn');
         const chatToggleBtn = document.getElementById('chatToggleBtn');
         const chatCloseBtn = document.getElementById('chatCloseBtn');
-        const chatOpenBtn = document.getElementById('chatOpenBtn');
         const floatingChat = document.getElementById('floatingChat');
         
         // Send message on button click
@@ -489,17 +840,8 @@ class DesignRatingApp {
         // Close chat (does not clear history)
         chatCloseBtn.addEventListener('click', () => {
             floatingChat.style.display = 'none';
-            chatOpenBtn.style.display = 'flex';
             // Hide quick action buttons when main chat is closed
             this.hideQuickActionButtons();
-        });
-
-        // Reopen chat
-        chatOpenBtn.addEventListener('click', () => {
-            floatingChat.style.display = 'flex';
-            chatOpenBtn.style.display = 'none';
-            // Show quick action buttons when main chat is reopened (if not already hidden)
-            this.showQuickActionButtons();
         });
         
         // Initialize chat in initial state
@@ -548,137 +890,6 @@ class DesignRatingApp {
         }
     }
     
-    async sendMainChatMessage() {
-        const mainChatInput = document.getElementById('chatInput');
-        const mainChatTags = document.getElementById('mainChatTags');
-        const chatResultsContent = document.getElementById('chatResultsContent');
-        const floatingChat = document.getElementById('floatingChat');
-        const message = mainChatInput.value.trim();
-        
-        // Get tags text and card content
-        const tagElements = Array.from(mainChatTags.querySelectorAll('.chat-tag'));
-        let tagsText = '';
-        let hasCardTags = false;
-        
-        for (const tagElement of tagElements) {
-            const tagText = tagElement.querySelector('.chat-tag-text').textContent;
-            const cardContent = tagElement.cardContent || tagElement.dataset.cardContent;
-            const argumentContent = tagElement.dataset.argumentContent;
-            const parentCard = tagElement.dataset.parentCard;
-            const fullContext = tagElement.dataset.fullContext;
-            const isAnswerSelection = tagElement.dataset.isAnswerSelection === 'true';
-            
-            
-            if (argumentContent) {
-                // Include the full argument content for argument tags
-                tagsText += `[${tagText} from ${parentCard}]\n${argumentContent}\n\n`;
-            } else if (cardContent) {
-                // Include the full card content for card tags
-                tagsText += `[${tagText}]\n${cardContent}\n\n`;
-                hasCardTags = true;
-            } else if (isAnswerSelection && fullContext) {
-                // Include the full context for answer selections
-                tagsText += `[${tagText}]\n${fullContext}\n\n`;
-            } else {
-                // Regular tag text for other tags
-                tagsText += tagText + ' ';
-            }
-        }
-        
-        // Handle the two scenarios for card tags
-        let fullMessage;
-        if (hasCardTags && message.trim()) {
-            // Scenario 1: User sends additional message and tags a card
-            // Pass on "message" + "text from the tagged card"
-            fullMessage = message + '\n\n' + tagsText;
-        } else if (hasCardTags && !message.trim()) {
-            // Scenario 2: User just tags the card and sends
-            // Pass on "can you go deeper into" + "text from the tagged card"
-            fullMessage = 'can you go deeper into ' + tagsText;
-        } else {
-            // No card tags, use original behavior
-            fullMessage = tagsText + message;
-        }
-        
-        
-        if (!fullMessage.trim()) {
-            return;
-        }
-        
-        // If the user directly pasted a COMMAND, handle immediately (no agent roundtrip)
-        const directCmd = String(fullMessage).match(COMMAND_RE);
-        if (directCmd) {
-            this.setChatState('expanded-state');
-            this.showMainChatResults('Loading inspirations…');
-            await this.handleCommand(fullMessage);
-            return;
-        }
-        
-        // Find the most recent card with images (optional)
-        const mostRecentCardId = this.findMostRecentCardWithImages();
-        
-        // Clear input and tags
-        mainChatInput.value = '';
-        mainChatTags.innerHTML = '';
-        
-        // Reset placeholder to initial state
-        mainChatInput.placeholder = 'Ask something...';
-        
-        // Transition to expanded state and show processing state
-        this.setChatState('expanded-state');
-        this.showMainChatResults('AI is analyzing your design...');
-        
-        // Start rotating loading messages
-        this.startLoadingMessages('chatResultsContent');
-        
-        // Hide upload card and show response card when using main chat
-        this.hideUploadCardAndShowResponse();
-        
-        try {
-            // Optional image
-            let imageUrl = null;
-            if (mostRecentCardId) {
-                const cardData = this.cardData.get(mostRecentCardId);
-                const firstKey = cardData ? Object.keys(cardData.uploadedImages)[0] : null;
-                if (firstKey) imageUrl = cardData.uploadedImages[firstKey].url;
-            }
-            const msgPayload = imageUrl ? [
-                { type: 'text', text: fullMessage },
-                { type: 'image_url', image_url: { url: imageUrl, detail: 'auto' } }
-            ] : fullMessage;
-
-            let streamedText = '';
-            await this.sendChat({
-                provider: this.currentProvider,
-                model: this.currentModel,
-                systemPrompt: this.currentSystemPrompt,
-                message: msgPayload,
-                history: this.getLastHistory(20),
-                onDelta: (delta, full) => {
-                    streamedText = full;
-                    this.showResponseInCard(full);
-                },
-                onDone: (finalText) => {
-                    this.mainChatHistory.push({
-                        timestamp: new Date().toISOString(),
-                        cardId: mostRecentCardId || 'main-chat',
-                        message: fullMessage,
-                        response: finalText || 'Done',
-                        conversationId: null
-                    });
-                    this.appendHistory(fullMessage, finalText || '');
-                    this.stopLoadingMessages();
-                    this.showMainChatHistory();
-                    this.hideQuickActionButtons();
-                    this.handleCommand(finalText || '');
-                    this.handleCommand(fullMessage);
-                }
-            });
-        } catch (error) {
-            console.error('Error:', error);
-            this.showMainChatResults('Sorry, I encountered an error. Please try again.');
-        }
-    }
     
     
     showMainChatResults(text) {
@@ -988,298 +1199,17 @@ class DesignRatingApp {
         reader.readAsDataURL(file);
     }
     
-    addImage(imageDataUrl, filename, cardId, zoneId) {
-        const cardData = this.cardData.get(cardId);
-        
-        // Store image data for this specific zone
-        const imageData = { url: imageDataUrl, filename };
-        cardData.uploadedImages[zoneId] = imageData;
-        
-        this.updateUploadDisplay(cardId, zoneId);
-    }
     
-    removeImage(cardId, zoneId) {
-        const cardData = this.cardData.get(cardId);
-        delete cardData.uploadedImages[zoneId];
-        this.updateUploadDisplay(cardId, zoneId);
-    }
     
-    updateUploadDisplay(cardId, zoneId = null) {
-        const cardData = this.cardData.get(cardId);
-        const uploadCard = document.getElementById(`card-${cardId}`);
-        const uploadZones = document.querySelector(`#card-${cardId} .upload-zones`);
-        
-        // Update specific zone if zoneId is provided
-        if (zoneId) {
-            this.updateZoneDisplay(cardId, zoneId, cardData.uploadedImages[zoneId]);
-            } else {
-            // Update all zones
-            for (let i = 1; i <= 3; i++) {
-                this.updateZoneDisplay(cardId, i, cardData.uploadedImages[i]);
-            }
-        }
-        
-        // Check if any images are uploaded
-        const hasImages = Object.keys(cardData.uploadedImages).length > 0;
-        
-        if (hasImages) {
-            uploadCard.classList.add('with-results');
-            uploadCard.classList.remove('without-results');
-            // Remove initial state when images are present
-            uploadCard.classList.remove('initial-state');
-            
-            // Add class to manage additional zones
-            if (uploadZones) {
-                uploadZones.classList.add('has-main-image');
-            }
-            
-            // Hide zones 2 and 3, keep only zone 1 (with image) and show zone 2 as smaller +
-            const zone2 = document.getElementById(`uploadZone-${cardId}-2`);
-            const zone3 = document.getElementById(`uploadZone-${cardId}-3`);
-            
-            if (zone2) {
-                zone2.style.display = 'flex'; // Show as smaller +
-            }
-            if (zone3) {
-                zone3.style.display = 'none'; // Hide completely
-            }
-            
-            // Hide main floating chat when user inserts a screen to analyze
-            const floatingChat = document.getElementById('floatingChat');
-            const chatOpenBtn = document.getElementById('chatOpenBtn');
-            if (floatingChat) {
-                floatingChat.style.display = 'none';
-            }
-            if (chatOpenBtn) {
-                chatOpenBtn.style.display = 'flex';
-            }
-            // Hide quick action buttons when main chat is hidden
-            this.hideQuickActionButtons();
-        } else {
-            uploadCard.classList.add('without-results');
-            uploadCard.classList.remove('with-results');
-            // Add initial state when no images are present
-            uploadCard.classList.add('initial-state');
-            
-            // Remove class and show all zones normally
-            if (uploadZones) {
-                uploadZones.classList.remove('has-main-image');
-            }
-            
-            // Show all zones normally
-            const zone2 = document.getElementById(`uploadZone-${cardId}-2`);
-            const zone3 = document.getElementById(`uploadZone-${cardId}-3`);
-            
-            if (zone2) {
-                zone2.style.display = 'flex';
-            }
-            if (zone3) {
-                zone3.style.display = 'flex';
-            }
-            
-            // Show main floating chat when no images are present
-            const floatingChat = document.getElementById('floatingChat');
-            const chatOpenBtn = document.getElementById('chatOpenBtn');
-            if (floatingChat) {
-                floatingChat.style.display = 'flex';
-            }
-            if (chatOpenBtn) {
-                chatOpenBtn.style.display = 'none';
-            }
-            // Show quick action buttons when main chat is shown (if not already hidden)
-            this.showQuickActionButtons();
-        }
-    }
     
-    updateZoneDisplay(cardId, zoneId, imageData) {
-        const uploadContent = document.getElementById(`uploadContent-${cardId}-${zoneId}`);
-        const uploadedImage = document.getElementById(`uploadedImage-${cardId}-${zoneId}`);
-        const removeBtn = document.getElementById(`removeBtn-${cardId}-${zoneId}`);
-        const uploadZone = document.getElementById(`uploadZone-${cardId}-${zoneId}`);
-        
-        if (imageData) {
-            // Show uploaded image
-            uploadContent.classList.add('hidden');
-            uploadedImage.classList.remove('hidden');
-            removeBtn.classList.remove('hidden');
-            uploadZone.classList.add('has-image');
-            
-            uploadedImage.innerHTML = `
-                <img src="${imageData.url}" alt="${imageData.filename}">
-                <button class="image-action-btn" onclick="event.stopPropagation(); app.addImageToMainChat('${imageData.url}', '${imageData.filename}')">Add to chat</button>
-            `;
-            
-            // Prevent click events on the uploaded image from triggering file input
-            const img = uploadedImage.querySelector('img');
-            img.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-            } else {
-            // Show upload prompt
-            uploadContent.classList.remove('hidden');
-            uploadedImage.classList.add('hidden');
-            removeBtn.classList.add('hidden');
-            uploadZone.classList.remove('has-image');
-        }
-    }
     
-    async analyzeImages(cardId) {
-        const cardData = this.cardData.get(cardId);
-        
-        if (cardData.isProcessing) {
-            return;
-        }
-        
-        // Allow analysis even without images
-        
-        // Show processing state in the current card
-        this.showResults('AI is analyzing your design...', cardId);
-        this.showResultsContainer(cardId);
-        cardData.isProcessing = true;
-        
-        try {
-            // For now, analyze the first image
-            const firstImage = cardData.uploadedImages[0];
-            let streamedText = '';
-            const msgPayload = firstImage?.url ? [
-                { type: 'text', text: 'Analyze this design' },
-                { type: 'image_url', image_url: { url: firstImage.url, detail: 'auto' } }
-            ] : 'Analyze this design';
-            await this.sendChat({
-                provider: this.currentProvider,
-                model: this.currentModel,
-                systemPrompt: this.currentSystemPrompt,
-                message: msgPayload,
-                history: this.getLastHistory(20),
-                onDelta: (delta, full) => {
-                    streamedText = full;
-                    this.showResults(full, cardId);
-                },
-                onDone: async (finalText) => {
-                    this.appendHistory('Analyze this design', finalText || '');
-                    await this.handleCommand(finalText || '');
-                }
-            });
-        } catch (error) {
-            console.error('Error:', error);
-            this.showResults('Sorry, I encountered an error. Please try again.', cardId);
-        } finally {
-            cardData.isProcessing = false;
-        }
-    }
-    
-    async sendMessage(cardId) {
-        const chatInput = document.getElementById(`chatInput-${cardId}`);
-        const chatTags = document.getElementById(`chatTags-${cardId}`);
-        const message = chatInput.value.trim();
-        
-        // Get tags text and handle answer selections
-        const tagElements = Array.from(chatTags.querySelectorAll('.chat-tag'));
-        let tagsText = '';
-        
-        for (const tagElement of tagElements) {
-            const tagText = tagElement.querySelector('.chat-tag-text').textContent;
-            const cardContent = tagElement.cardContent || tagElement.dataset.cardContent;
-            const fullContext = tagElement.dataset.fullContext;
-            const isAnswerSelection = tagElement.dataset.isAnswerSelection === 'true';
-            
-            if (cardContent) {
-                // Include the full card content for card tags
-                tagsText += `[${tagText}]\n${cardContent}\n\n`;
-            } else if (isAnswerSelection && fullContext) {
-                // Include the full context for answer selections
-                tagsText += `[${tagText}]\n${fullContext}\n\n`;
-            } else {
-                // Regular tag text
-                tagsText += tagText + ' ';
-            }
-        }
-        
-        const fullMessage = tagsText + message;
-        
-        if (!fullMessage.trim()) {
-            return;
-        }
-        
-        const cardData = this.cardData.get(cardId);
-        // Images optional; we proceed even if none are uploaded
-        
-        // Clear input and tags
-        chatInput.value = '';
-        chatTags.innerHTML = '';
-        
-        // Show processing state in the current card
-        this.showResults('AI is analyzing your design...', cardId);
-        this.showResultsContainer(cardId);
-        
-        // Start rotating loading messages for this card
-        this.startLoadingMessages(`resultsContent-${cardId}`);
-        
-        cardData.isProcessing = true;
-
-        // Add a pending entry to the card history immediately
-        if (!this.conversationHistory.has(cardId)) {
-            this.conversationHistory.set(cardId, []);
-        }
-        const pendingEntry = {
-            timestamp: new Date().toISOString(),
-            message: fullMessage,
-            response: 'AI is analyzing your design…',
-            conversationId: this.currentConversationId || null,
-        };
-        const history = this.conversationHistory.get(cardId);
-        history.push(pendingEntry);
-        this.showCardChatHistory(cardId);
-        
-        try {
-            // Prepare multimodal message if image present
-            let imageUrl = null;
-            const firstKey = Object.keys(cardData.uploadedImages)[0];
-            if (firstKey) imageUrl = cardData.uploadedImages[firstKey].url;
-            const msgPayload = imageUrl ? [
-                { type: 'text', text: fullMessage },
-                { type: 'image_url', image_url: { url: imageUrl, detail: 'auto' } }
-            ] : fullMessage;
-
-            let streamedText = '';
-            await this.sendChat({
-                provider: this.currentProvider,
-                model: this.currentModel,
-                systemPrompt: this.currentSystemPrompt,
-                message: msgPayload,
-                history: this.getLastHistory(20),
-                onDelta: (delta, full) => {
-                    streamedText = full;
-                    // live render
-                    const resultsContent = document.getElementById(`resultsContent-${cardId}`);
-                    if (resultsContent) {
-                        resultsContent.innerHTML = `<div class="feedback-text">${this.formatContent(full)}</div>`;
-                    }
-                },
-                onDone: async (finalText) => {
-                    pendingEntry.response = finalText || 'Done';
-                    this.showCardChatHistory(cardId);
-                    this.appendHistory(fullMessage, finalText || '');
-                    this.stopLoadingMessages();
-                    await this.handleCommand(finalText || '');
-                    await this.handleCommand(fullMessage);
-                }
-            });
-        } catch (error) {
-            console.error('Error:', error);
-            this.showResults('Sorry, I encountered an error. Please try again.', cardId);
-        } finally {
-            cardData.isProcessing = false;
-        }
-    }
     
     // analyzeDesign is now replaced by sendChat usage inside callers
     
     showResultsContainer(cardId) {
-        const resultsContainer = document.getElementById(`resultsContainer-${cardId}`);
+        // Results are now displayed in chat area, so this method is no longer needed
+        // Keeping for compatibility but not showing results container
         const uploadCard = document.getElementById(`card-${cardId}`);
-        resultsContainer.classList.remove('hidden');
         uploadCard.classList.add('with-results');
         uploadCard.classList.remove('without-results');
     }
@@ -1324,16 +1254,8 @@ class DesignRatingApp {
         // Try to parse and format the text into different card types
         const parsedContent = this.parseDustOutput(text);
         
-        if (parsedContent.cards && parsedContent.cards.length > 0) {
-            // Render structured cards
-            resultsContent.innerHTML = this.renderStructuredCards(parsedContent.cards);
-        } else {
-            // Fallback to plain text display
-            resultsContent.innerHTML = `<div class="feedback-text">${text}</div>`;
-        }
-        
-        // Ensure results container is visible
-        this.showResultsContainer(cardId);
+        // Display results in chat area instead of results container
+        this.displayResultsInChat(parsedContent, text, cardId);
         
         // Update chat history for this card
         this.showCardChatHistory(cardId);
@@ -2142,18 +2064,10 @@ Product: E-commerce App | Industry: Retail | Platform: Web
     }
 
     
-    // Handle quick action for contextual chat (upload cards)
-    handleQuickAction(action, cardId) {
-        const chatInput = document.getElementById(`chatInput-${cardId}`);
-        if (chatInput) {
-            chatInput.value = action;
-            this.sendMessage(cardId);
-        }
-    }
     
     // Handle quick action for main chat
     handleMainQuickAction(action) {
-        const mainChatInput = document.getElementById('chatInput');
+        const mainChatInput = document.getElementById('mainChatInput');
         if (mainChatInput) {
             mainChatInput.value = action;
             this.sendMainChatMessage();
