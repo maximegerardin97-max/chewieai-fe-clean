@@ -281,6 +281,60 @@ class DesignRatingApp {
         }
     }
 
+    async compressMultimodalMessage(message) {
+        const compressed = [];
+        
+        for (const part of message) {
+            if (part.type === 'image_url' && part.image_url?.url) {
+                try {
+                    // Compress the image
+                    const compressedImage = await this.compressImage(part.image_url.url);
+                    compressed.push({
+                        type: 'image_url',
+                        image_url: { url: compressedImage }
+                    });
+                } catch (error) {
+                    console.error('Image compression failed:', error);
+                    // Fallback to original image
+                    compressed.push(part);
+                }
+            } else {
+                compressed.push(part);
+            }
+        }
+        
+        return compressed;
+    }
+
+    async compressImage(dataUrl, maxWidth = 1024, quality = 0.8) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                // Calculate new dimensions
+                let { width, height } = img;
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                // Draw and compress
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                
+                console.log(`Image compressed: ${dataUrl.length} -> ${compressedDataUrl.length} bytes`);
+                resolve(compressedDataUrl);
+            };
+            img.onerror = reject;
+            img.src = dataUrl;
+        });
+    }
+
     async sendChat({ provider, model, systemPrompt, message, history, onDelta, onDone }) {
         if (!this.accessToken) { this.showAuthModal(); throw new Error('Please sign in first'); }
         console.log('[SENDCHAT] Starting with token:', this.accessToken ? 'present' : 'missing');
@@ -324,6 +378,11 @@ class DesignRatingApp {
         if (Array.isArray(message)) {
             console.log('[SENDCHAT] Message array length:', message.length);
             console.log('[SENDCHAT] Message array contents:', message);
+            
+            // Compress images in multimodal messages to reduce payload size
+            const compressedMessage = await this.compressMultimodalMessage(message);
+            console.log('[SENDCHAT] Compressed message:', compressedMessage);
+            message = compressedMessage;
         }
         
         const controller = new AbortController();
