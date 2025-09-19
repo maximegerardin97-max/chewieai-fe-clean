@@ -154,7 +154,7 @@ class DesignRatingApp {
             const { error } = await this.supabaseClient.auth.signInWithOtp({
                 email,
                 options: { 
-                    emailRedirectTo: process.env.NODE_ENV === 'production' 
+                    emailRedirectTo: window.location.hostname === 'maximegerardin97-max.github.io'
                         ? 'https://maximegerardin97-max.github.io/chewieai-fe-clean'
                         : `${window.location.origin}` 
                 },
@@ -187,7 +187,7 @@ class DesignRatingApp {
                 const { error } = await this.supabaseClient.auth.signInWithOtp({
                     email,
                     options: { 
-                        emailRedirectTo: process.env.NODE_ENV === 'production' 
+                        emailRedirectTo: window.location.hostname === 'maximegerardin97-max.github.io'
                             ? 'https://maximegerardin97-max.github.io/chewieai-fe-clean'
                             : `${window.location.origin}` 
                     },
