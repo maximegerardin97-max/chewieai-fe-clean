@@ -312,6 +312,14 @@ class DesignRatingApp {
         } catch (_) {}
         
         // Non-streaming: send message to backend
+        console.log('[SENDCHAT] Sending request to:', `${this.backendUrl}/api-chat`);
+        console.log('[SENDCHAT] Request body:', {
+            conversation_id: this.currentConversationId,
+            message: message,
+            provider: provider || 'openai',
+            model: model || 'gpt-4',
+        });
+        
         const resp = await fetch(`${this.backendUrl}/api-chat`, {
             method: 'POST',
             headers: this.getAuthHeaders(),
@@ -322,6 +330,9 @@ class DesignRatingApp {
                 model: model || 'gpt-4',
             })
         });
+        
+        console.log('[SENDCHAT] Response status:', resp.status);
+        console.log('[SENDCHAT] Response headers:', Object.fromEntries(resp.headers.entries()));
         
         if (!resp.ok) {
             const errorData = await resp.json().catch(() => ({}));
