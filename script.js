@@ -320,6 +320,9 @@ class DesignRatingApp {
             model: model || 'gpt-4',
         });
         
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
         const resp = await fetch(`${this.backendUrl}/api-chat`, {
             method: 'POST',
             headers: this.getAuthHeaders(),
@@ -328,8 +331,11 @@ class DesignRatingApp {
                 message: message,
                 provider: provider || 'openai',
                 model: model || 'gpt-4',
-            })
+            }),
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         
         console.log('[SENDCHAT] Response status:', resp.status);
         console.log('[SENDCHAT] Response headers:', Object.fromEntries(resp.headers.entries()));
