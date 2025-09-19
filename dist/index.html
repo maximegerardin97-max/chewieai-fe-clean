@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design Canvas - AI Assistant</title>
+    <script>
+    window.AGENT_CFG = {
+    CHAT_URL: 'https://iiolvvdnzrfcffudwocp.functions.supabase.co/chat',
+    SUPABASE_URL: 'https://iiolvvdnzrfcffudwocp.supabase.co',
+    SUPABASE_ANON: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlpb2x2dmRuenJmY2ZmdWR3b2NwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc1MjE4MDAsImV4cCI6MjA3MzA5NzgwMH0.2-e8Scn26fqsR11h-g4avH8MWybwLTtcf3fCN9qAgVw'
+    };
+    </script>
+  <link rel="stylesheet" crossorigin href="/assets/index-BWPTCmAF.css">
+</head>
+<body>
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Left-side History Drawer -->
+        <button id="historyDrawerToggle" title="Open history" style="position: fixed; left: 12px; top: 25%; z-index: 1100; background: #1f2937; color: #fff; border: none; border-radius: 0 8px 8px 0; padding: 10px 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            &#x23F2;
+        </button>
+        <aside id="historyDrawer" aria-hidden="true" style="position: fixed; top: 0; left: 0; height: 100vh; width: 320px; background: #0f172a; color: #e2e8f0; transform: translateX(-100%); transition: transform 0.25s ease; z-index: 1099; display: flex; flex-direction: column; border-right: 1px solid #1f2937;">
+            <div style="padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1f2937;">
+                <div style="display:flex; align-items:center; gap: 8px; font-weight: 600;">History</div>
+                <div style="display:flex; gap: 8px;">
+                    <button id="historyNewBtn" style="background:#1f2937;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:6px 10px;cursor:pointer;">New</button>
+                    <button id="historyCloseBtn" style="background:#1f2937;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:6px 10px;cursor:pointer;">×</button>
+                </div>
+            </div>
+            <div id="historyDrawerList" style="flex:1; overflow-y:auto;"></div>
+        </aside>
+        <!-- Upload Cards Stack -->
+        <div class="upload-cards-stack" id="uploadCardsStack">
+            <!-- Initial Upload Card -->
+            <div class="upload-card" id="card-1">
+                <div class="card-header">
+                    <h2 class="card-title">Rate my designs</h2>
+                </div>
+                <div class="upload-content-container">
+                    <!-- Left Part: Upload and Chat -->
+                    <div class="upload-section">
+                        <div class="upload-zones">
+                            <div class="upload-zone" id="uploadZone-1-1">
+                                <input type="file" id="imageUpload-1-1" accept="image/*" class="hidden">
+                                <div class="upload-content" id="uploadContent-1-1">
+                                    <div class="plus-icon">+</div>
+                                </div>
+                                <div class="uploaded-image hidden" id="uploadedImage-1-1"></div>
+                                <button class="remove-btn hidden" id="removeBtn-1-1">×</button>
+                            </div>
+                            <div class="upload-zone" id="uploadZone-1-2">
+                                <input type="file" id="imageUpload-1-2" accept="image/*" class="hidden">
+                                <div class="upload-content" id="uploadContent-1-2">
+                                    <div class="plus-icon">+</div>
+                                </div>
+                                <div class="uploaded-image hidden" id="uploadedImage-1-2"></div>
+                                <button class="remove-btn hidden" id="removeBtn-1-2">×</button>
+                            </div>
+                            <div class="upload-zone" id="uploadZone-1-3">
+                                <input type="file" id="imageUpload-1-3" accept="image/*" class="hidden">
+                                <div class="upload-content" id="uploadContent-1-3">
+                                    <div class="plus-icon">+</div>
+                                </div>
+                                <div class="uploaded-image hidden" id="uploadedImage-1-3"></div>
+                                <button class="remove-btn hidden" id="removeBtn-1-3">×</button>
+                            </div>
+                        </div>
+                        <div class="chat-section">
+                            <div class="quick-actions" id="quickActions-1">
+                                <button class="quick-action-btn" data-action="rate this design">Rate this design</button>
+                                <button class="quick-action-btn" data-action="quick UI check">Quick UI check</button>
+                                <button class="quick-action-btn" data-action="find inspirations for this">Find inspirations</button>
+                            </div>
+                            <div class="chat-input-container">
+                                <div class="chat-tags" id="chatTags-1"></div>
+                                <input type="text" class="chat-input" id="chatInput-1" placeholder="Ask anything">
+                            </div>
+                             <button class="send-btn upload-send-btn" id="sendBtn-1">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7l5-5 5 5z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Right Part: Results -->
+                    <div class="results-container hidden" id="resultsContainer-1">
+                        <div class="chat-history-container" id="chatHistory-1">
+                            <div class="chat-history-content" id="chatHistoryContent-1">
+                                <div class="placeholder-text">Coming up with a recommendation</div>
+                            </div>
+                        </div>
+                        <div class="results-content" id="resultsContent-1">
+                            <div class="placeholder-text">Looking into our infinite design knowledge</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Right Card - Feedback -->
+        <div class="feedback-card" id="feedbackCard">
+            <div class="card-header">
+                <h2 class="card-title">Rating...</h2>
+            </div>
+            <div class="feedback-content" id="feedbackContent">
+                <div class="placeholder-text">Coming up with a recommendation</div>
+            </div>
+        </div>
+
+        <!-- Inspirations Card (hidden until used) -->
+        <div class="feedback-card" id="inspirationsCard" style="display:none;">
+            <div class="card-header">
+                <h2 class="card-title">Inspirations</h2>
+            </div>
+            <div class="feedback-content" id="inspirationsContent">
+                <div class="placeholder-text">We’ll suggest relevant flows here.</div>
+            </div>
+        
+    </div>
+    
+    <!-- Main Chat Quick Actions -->
+    <div class="main-chat-quick-actions" id="mainQuickActions">
+        <button class="quick-action-btn" data-action="help me create an onboarding for a wellness app">Wellness onboarding</button>
+        <button class="quick-action-btn" data-action="give me a verification flow">Verification flow</button>
+        <button class="quick-action-btn" data-action="how to increase retention on my dating app?">Dating retention</button>
+    </div>
+    
+    <!-- Floating Chat Input -->
+    <div class="floating-chat" id="floatingChat">
+        <div class="chat-header">
+            <span class="chat-title">Conversation</span>
+            <button class="chat-toggle-btn" id="chatToggleBtn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 9L12 15L18 9"></path>
+                </svg>
+            </button>
+            <button class="chat-close-btn" id="chatCloseBtn" title="Close chat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18"></path>
+                    <path d="M6 6L18 18"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="chat-results-container" id="chatResultsContainer">
+            <div class="chat-results-content" id="chatResultsContent">
+                <div class="placeholder-text">Looking into our infinite design knowledge</div>
+            </div>
+        </div>
+        <div class="chat-controls">
+            <div class="chat-input-container">
+                <div class="chat-tags" id="mainChatTags"></div>
+                <input type="text" id="chatInput" placeholder="Ask something..." />
+            </div>
+            <button id="sendBtn" class="send-btn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7l5-5 5 5z"/>
+                </svg>
+            </button>
+            </div>
+    </div>
+    
+    <!-- Floating Selection Button -->
+    <button class="selection-floating-btn" id="selectionFloatingBtn">Add to chat</button>
+    <!-- Reopen chat FAB (hidden by default) -->
+    <button class="chat-open-fab" id="chatOpenBtn" style="display:none;" title="Open chat">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7l5-5 5 5z"/>
+        </svg>
+    </button>
+    
+    <!-- Training Data Link -->
+    <a href="#" class="training-data-link" id="trainingDataLink">training data</a>
+    
+    <!-- Debug Controls -->
+    <div class="debug-controls">
+        <div class="debug-segmented-control">
+            <button class="debug-segment active" data-state="initial-state">Initial</button>
+            <button class="debug-segment" data-state="initial-state-with-tag">With Tag</button>
+            <button class="debug-segment" data-state="expanded-state">Expanded</button>
+            <button class="debug-segment" data-state="collapsed-state">Collapsed</button>
+        </div>
+    </div>
+    
+    <!-- Auth and History Controls -->
+    <div style="position: fixed; bottom: 16px; right: 16px; z-index: 1000; display: flex; align-items: center; gap: 12px; background: white; padding: 8px 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div id="authContainer"></div>
+        <button id="historyBtn" style="padding: 6px 12px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+            </svg>
+            History
+        </button>
+    </div>
+    
+    <!-- Training Data Modal -->
+    <div class="modal-overlay" id="trainingDataModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Training Data Upload</h2>
+                <button class="modal-close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-section">
+                    <div class="upload-zone" id="folderUploadZone">
+                        <input type="file" id="folderUpload" webkitdirectory multiple style="display: none;">
+                        <div class="upload-content">
+                            <div class="upload-icon">📁</div>
+                            <p>Click to select folders with training data</p>
+                            <p class="upload-hint">Select folders containing app flows (e.g., "Duolingo iOS Onboarding")</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="upload-progress" id="uploadProgress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Uploading...</div>
+                </div>
+                <div class="upload-results" id="uploadResults" style="display: none;">
+                    <h3>Upload Results</h3>
+                    <div id="resultsContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="root"></div>
+    <!-- Auth Modal -->
+    <div id="authModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:2000; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+        <div style="background:#fff; width:400px; max-width:90vw; border-radius:16px; box-shadow:0 20px 40px rgba(0,0,0,0.3); overflow:hidden; animation:modalSlideIn 0.3s ease-out;">
+            <div style="padding:20px 24px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
+                <div style="font-weight:600; font-size:18px; color:#1f2937;">Welcome to Design Canvas</div>
+                <button id="authModalClose" style="border:none; background:transparent; font-size:24px; cursor:pointer; color:#6b7280; padding:4px; border-radius:4px; transition:background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">×</button>
+            </div>
+            <div style="padding:24px;">
+                <div style="font-size:16px; color:#374151; margin-bottom:16px; line-height:1.5;">Sign in to start rating designs and accessing your conversation history.</div>
+                <input id="authEmailInput" type="email" placeholder="Enter your email address" style="width:100%; padding:12px 16px; border:2px solid #e5e7eb; border-radius:8px; font-size:16px; transition:border-color 0.2s; box-sizing:border-box;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e5e7eb'" />
+                <button id="authEmailSubmit" style="margin-top:16px; width:100%; padding:12px 16px; background:#1f2937; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:16px; font-weight:500; transition:background 0.2s;" onmouseover="this.style.background='#111827'" onmouseout="this.style.background='#1f2937'">Send magic link</button>
+                <div id="authHint" style="font-size:14px; color:#6b7280; margin-top:12px; text-align:center;">We'll send you a secure sign-in link via email</div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: scale(0.9) translateY(-20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+    </style>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+    <!-- <script type="module" src="/src/main.tsx"></script> -->
+</body>
+</html>
