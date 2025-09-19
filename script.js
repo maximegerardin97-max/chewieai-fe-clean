@@ -319,6 +319,12 @@ class DesignRatingApp {
             provider: provider || 'openai',
             model: model || 'gpt-4',
         });
+        console.log('[SENDCHAT] Message type:', typeof message);
+        console.log('[SENDCHAT] Message is array:', Array.isArray(message));
+        if (Array.isArray(message)) {
+            console.log('[SENDCHAT] Message array length:', message.length);
+            console.log('[SENDCHAT] Message array contents:', message);
+        }
         
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
