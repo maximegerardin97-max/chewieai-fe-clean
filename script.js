@@ -15,7 +15,7 @@ class DesignRatingApp {
         this.supabaseUrl = cfg.SUPABASE_URL || '';
         this.supabaseKey = cfg.SUPABASE_ANON || '';
         this.chatUrl = cfg.CHAT_URL || '';
-        this.backendUrl = 'https://iiolvvdnzrfcffudwocp.supabase.co/functions/v1';
+        this.backendUrl = 'http://localhost:3000/api';
         this.supabaseClient = null;
         this.accessToken = null;
         this.userEmail = null;
@@ -277,7 +277,7 @@ class DesignRatingApp {
         try {
             const userText = this.normalizeContentAsText(message);
             const title = this.generateTitleFromMessage(userText) || 'New conversation';
-            await fetch(`${this.backendUrl}/conversations/${this.currentConversationId}`, {
+            await fetch(`${this.backendUrl}/api-conversations/${this.currentConversationId}`, {
                 method: 'PUT',
                 headers: this.getAuthHeaders(),
                 body: JSON.stringify({ title })
@@ -1314,7 +1314,7 @@ class DesignRatingApp {
                     try {
                         const title = this.generateTitleFromMessage(fullMessage) || 'New conversation';
                         if (title && this.currentConversationId) {
-                            await fetch(`${this.backendUrl}/conversations/${this.currentConversationId}`, {
+                            await fetch(`${this.backendUrl}/api-conversations/${this.currentConversationId}`, {
                                 method: 'PUT',
                                 headers: this.getAuthHeaders(),
                                 body: JSON.stringify({ title })
