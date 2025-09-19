@@ -282,27 +282,35 @@ class DesignRatingApp {
     }
 
     async compressMultimodalMessage(message) {
+        console.log('[COMPRESS] Starting compression of message with', message.length, 'parts');
         const compressed = [];
         
-        for (const part of message) {
+        for (let i = 0; i < message.length; i++) {
+            const part = message[i];
+            console.log(`[COMPRESS] Processing part ${i}:`, part.type);
+            
             if (part.type === 'image_url' && part.image_url?.url) {
                 try {
+                    console.log('[COMPRESS] Compressing image, original size:', part.image_url.url.length);
                     // Compress the image
                     const compressedImage = await this.compressImage(part.image_url.url);
+                    console.log('[COMPRESS] Image compressed, new size:', compressedImage.length);
                     compressed.push({
                         type: 'image_url',
                         image_url: { url: compressedImage }
                     });
                 } catch (error) {
-                    console.error('Image compression failed:', error);
+                    console.error('[COMPRESS] Image compression failed:', error);
                     // Fallback to original image
                     compressed.push(part);
                 }
             } else {
+                console.log('[COMPRESS] Keeping non-image part as-is');
                 compressed.push(part);
             }
         }
         
+        console.log('[COMPRESS] Compression complete, returning', compressed.length, 'parts');
         return compressed;
     }
 
@@ -380,6 +388,7 @@ class DesignRatingApp {
             console.log('[SENDCHAT] Message array contents:', message);
             
             // Compress images in multimodal messages to reduce payload size
+            console.log('[SENDCHAT] Compressing multimodal message...');
             const compressedMessage = await this.compressMultimodalMessage(message);
             console.log('[SENDCHAT] Compressed message:', compressedMessage);
             message = compressedMessage;
