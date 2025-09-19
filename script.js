@@ -324,6 +324,7 @@ class DesignRatingApp {
         if (Array.isArray(message)) {
             console.log('[SENDCHAT] Message array length:', message.length);
             console.log('[SENDCHAT] Message array contents:', message);
+            console.log('[SENDCHAT] Message array JSON:', JSON.stringify(message));
         }
         
         const controller = new AbortController();
