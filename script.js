@@ -1,5 +1,5 @@
 // Simple Design Rating App
-const COMMAND_RE = /command\s*:?\s*send\s+([a-z0-9]+)\s+(.+)/i;
+const COMMAND_RE = /command\s*:?\s*send\s+([a-z0-9.]+)\s+(.+)/i;
 
 // ------------------------------------------------------------
 // Simplified frontend - backend handles all mapping now
@@ -15,6 +15,11 @@ class DesignRatingApp {
         this.supabaseUrl = cfg.SUPABASE_URL || '';
         this.supabaseKey = cfg.SUPABASE_ANON || '';
         this.chatUrl = cfg.CHAT_URL || '';
+        this.backendUrl = 'http://localhost:3000/api';
+        this.supabaseClient = null;
+        this.accessToken = null;
+        this.userEmail = null;
+        this.currentConversationId = null;
         this.uploadedImages = [];
         this.isProcessing = false;
         this.currentCardId = 1;
@@ -22,7 +27,6 @@ class DesignRatingApp {
         
         // Conversation context management
         this.conversationHistory = new Map(); // cardId -> conversation history
-        this.currentConversationId = null; // Current active conversation
         this.mainChatHistory = []; // Centralized main chat history
         this.chatMemory = []; // last 10 turns (20 messages)
 
@@ -46,6 +50,13 @@ class DesignRatingApp {
     init() {
         this.setupEventListeners();
         this.initializeCard(1); // Initialize the first card
+        this.initSupabase();
+        this.initAuthModal();
+        
+        // Force-hide left rating panel from the start
+        const feedbackCard = document.getElementById('feedbackCard');
+        if (feedbackCard) feedbackCard.style.display = 'none';
+        
         // Load shared settings on start
         this.loadSharedSettings().then((s) => {
             if (s) {
@@ -64,6 +75,137 @@ class DesignRatingApp {
                 }
             }).catch(console.error);
         });
+    }
+
+    async initSupabase() {
+        if (!this.supabaseUrl || !this.supabaseKey) return;
+        
+        // Initialize Supabase client
+        this.supabaseClient = window.supabase.createClient(this.supabaseUrl, this.supabaseKey, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true,
+            },
+        });
+        
+        // Handle magic link redirect
+        try {
+            const hash = window.location.hash.slice(1);
+            if (hash) {
+                const p = new URLSearchParams(hash);
+                const access_token = p.get('access_token');
+                const refresh_token = p.get('refresh_token');
+                if (access_token && refresh_token) {
+                    await this.supabaseClient.auth.setSession({ access_token, refresh_token });
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
+        } catch {}
+        
+        // Check for existing session
+        const { data } = await this.supabaseClient.auth.getSession();
+        if (data?.session) {
+            this.accessToken = data.session.access_token;
+            this.userEmail = data.session.user?.email;
+            this.updateAuthUI();
+        }
+        
+        // Listen for auth changes
+        this.supabaseClient.auth.onAuthStateChange((_event, session) => {
+            if (session) {
+                this.accessToken = session.access_token;
+                this.userEmail = session.user?.email;
+                this.updateAuthUI();
+            } else {
+                this.accessToken = null;
+                this.userEmail = null;
+                this.updateAuthUI();
+            }
+        });
+    }
+
+    updateAuthUI() {
+        const authContainer = document.getElementById('authContainer');
+        if (!authContainer) return;
+        
+        if (this.userEmail) {
+            authContainer.innerHTML = `
+                <span style="font-size: 12px; color: #666; border: 1px solid #ddd; padding: 2px 6px; border-radius: 10px;">
+                    ${this.userEmail} • logged in
+                </span>
+                <button onclick="app.signOut()" style="margin-left: 8px; padding: 4px 8px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;">Sign out</button>
+            `;
+            // Hide the modal if user is signed in
+            this.hideAuthModal();
+        } else {
+            // Hide the small auth field and show the modal instead
+            authContainer.innerHTML = '';
+            this.showAuthModal();
+        }
+    }
+
+    async signIn() {
+        const emailInput = document.getElementById('emailInput');
+        const email = emailInput?.value?.trim();
+        if (!email) return alert('Please enter an email');
+        
+        try {
+            const { error } = await this.supabaseClient.auth.signInWithOtp({
+                email,
+                options: { emailRedirectTo: `${window.location.origin}` },
+            });
+            if (error) throw error;
+            alert('Magic link sent. Check your email.');
+        } catch (e) {
+            alert('Sign in failed: ' + e.message);
+        }
+    }
+
+    async signOut() {
+        await this.supabaseClient.auth.signOut();
+        window.location.reload();
+    }
+
+    initAuthModal() {
+        const modal = document.getElementById('authModal');
+        const closeBtn = document.getElementById('authModalClose');
+        const submitBtn = document.getElementById('authEmailSubmit');
+        const emailInput = document.getElementById('authEmailInput');
+        if (closeBtn) closeBtn.addEventListener('click', () => this.hideAuthModal());
+        if (modal) modal.addEventListener('click', (e) => {
+            if (e.target === modal) this.hideAuthModal();
+        });
+        if (submitBtn) submitBtn.addEventListener('click', async () => {
+            const email = emailInput?.value?.trim();
+            if (!email) { emailInput?.focus(); return; }
+            try {
+                const { error } = await this.supabaseClient.auth.signInWithOtp({
+                    email,
+                    options: { emailRedirectTo: `${window.location.origin}` },
+                });
+                if (error) throw error;
+                submitBtn.textContent = 'Link sent ✅';
+                setTimeout(() => this.hideAuthModal(), 800);
+            } catch (e) {
+                submitBtn.textContent = 'Send magic link';
+                alert('Sign in failed: ' + (e?.message || 'Unknown error'));
+            }
+        });
+    }
+
+    showAuthModal() {
+        const modal = document.getElementById('authModal');
+        const input = document.getElementById('authEmailInput');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        setTimeout(() => input && input.focus(), 0);
+    }
+
+    hideAuthModal() {
+        const modal = document.getElementById('authModal');
+        if (!modal) return;
+        modal.style.display = 'none';
     }
 
     async loadSharedSettings() {
@@ -104,59 +246,91 @@ class DesignRatingApp {
         return this.chatMemory.slice(-limit);
     }
 
-    async sendChat({ provider, model, systemPrompt, message, history, onDelta, onDone }) {
-        if (!this.chatUrl || !this.supabaseKey) throw new Error('Chat not configured');
-        const body = {
-            provider,
-            model,
-            systemPrompt,
-            message,
-            history: Array.isArray(history) ? history : []
+    getAuthHeaders() {
+        if (!this.accessToken) {
+            throw new Error('Not authenticated');
+        }
+        return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.accessToken}`
         };
-        const resp = await fetch(this.chatUrl, {
+    }
+
+    async sendChat({ provider, model, systemPrompt, message, history, onDelta, onDone }) {
+        if (!this.accessToken) { this.showAuthModal(); throw new Error('Please sign in first'); }
+        
+        // Ensure we have a conversation
+        if (!this.currentConversationId) {
+            const conv = await this.createConversation();
+            this.currentConversationId = conv.id;
+        }
+        
+        // Attempt to set conversation title immediately from the user message
+        try {
+            const userText = this.normalizeContentAsText(message);
+            const title = this.generateTitleFromMessage(userText) || 'New conversation';
+            await fetch(`${this.backendUrl}/conversations/${this.currentConversationId}`, {
+                method: 'PUT',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify({ title })
+            });
+            // do not await drawer re-render here to keep UX snappy
+            this.renderHistoryDrawer();
+        } catch (_) {}
+        
+        // Non-streaming: send message to backend
+        const resp = await fetch(`${this.backendUrl}/messages`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.supabaseKey}`,
-                'apikey': this.supabaseKey,
-            },
-            body: JSON.stringify(body)
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({
+                conversation_id: this.currentConversationId,
+                message: message,
+                provider: provider || 'openai',
+                model: model || 'gpt-4',
+            })
         });
-        if (!resp.ok || !resp.body) {
-            throw new Error(`Chat HTTP ${resp.status}`);
+        
+        if (!resp.ok) {
+            throw new Error(`Backend HTTP ${resp.status}`);
         }
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder('utf-8');
-        let buffer = '';
-        let fullText = '';
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split(/\n\n|\n/);
-            buffer = lines.pop() || '';
-            for (const line of lines) {
-                const m = line.match(/^data:\s*(.*)$/);
-                if (!m) continue;
-                try {
-                    const evt = JSON.parse(m[1]);
-                    if (evt.type === 'content') {
-                        const delta = evt.delta || evt.content || '';
-                        if (delta) {
-                            fullText += delta;
-                            if (onDelta) onDelta(delta, fullText);
-                        }
-                    } else if (evt.type === 'done') {
-                        if (onDone) onDone(fullText);
-                    }
-                } catch (e) {
-                    // ignore JSON parse errors for keepalive lines
-                }
-            }
-        }
-        // Safety finalization
-        if (onDone) onDone(fullText);
-        return fullText;
+        const data = await resp.json();
+        const assistant = data?.message;
+        const assistantText = assistant?.content?.value ?? assistant?.content ?? '';
+        if (onDelta) onDelta(assistantText, assistantText);
+        if (onDone) onDone(assistantText);
+        return assistantText;
+    }
+
+    async createConversation() {
+        if (!this.accessToken) { this.showAuthModal(); throw new Error('Please sign in first'); }
+        const resp = await fetch(`${this.backendUrl}/conversations`, {
+            method: 'POST',
+            headers: this.getAuthHeaders(),
+            body: JSON.stringify({})
+        });
+        if (!resp.ok) throw new Error(`Create conversation failed: ${resp.status}`);
+        const data = await resp.json();
+        return data.conversation;
+    }
+
+    async loadConversations() {
+        if (!this.accessToken) { this.showAuthModal(); return []; }
+        const resp = await fetch(`${this.backendUrl}/conversations`, {
+            headers: this.getAuthHeaders()
+        });
+        if (!resp.ok) throw new Error(`Load conversations failed: ${resp.status}`);
+        const data = await resp.json();
+        return data.conversations || [];
+    }
+
+    async loadMessages(conversationId) {
+        if (!this.accessToken) { this.showAuthModal(); return []; }
+        const resp = await fetch(`${this.backendUrl}/messages?conversation_id=${conversationId}`, {
+            headers: this.getAuthHeaders()
+        });
+        if (!resp.ok) throw new Error(`Load messages failed: ${resp.status}`);
+        const data = await resp.json();
+        return data.messages || [];
     }
     
     // Conversation context management methods
@@ -376,6 +550,80 @@ class DesignRatingApp {
             el.classList.toggle('minimized');
         });
 
+        // History drawer controls
+        const drawer = document.getElementById('historyDrawer');
+        const toggleA = document.getElementById('historyDrawerToggle');
+        const toggleB = document.getElementById('historyBtn');
+        const closeBtn = document.getElementById('historyCloseBtn');
+        const newBtn = document.getElementById('historyNewBtn');
+        const listEl = document.getElementById('historyDrawerList');
+        const openDrawer = () => {
+            if (!drawer) return;
+            console.debug('[HISTORY] openDrawer');
+            drawer.style.transform = 'translateX(0)';
+            drawer.setAttribute('aria-hidden', 'false');
+            this.renderHistoryDrawer();
+        };
+        const closeDrawer = () => {
+            if (!drawer) return;
+            console.debug('[HISTORY] closeDrawer');
+            drawer.style.transform = 'translateX(-100%)';
+            drawer.setAttribute('aria-hidden', 'true');
+            // Move focus away to avoid aria-hidden focus warnings
+            try { if (document.activeElement) document.activeElement.blur(); } catch {}
+        };
+        toggleA && toggleA.addEventListener('click', openDrawer);
+        toggleB && toggleB.addEventListener('click', openDrawer);
+        closeBtn && closeBtn.addEventListener('click', closeDrawer);
+        newBtn && newBtn.addEventListener('click', async () => {
+            try {
+                const conv = await this.createConversation();
+                this.currentConversationId = conv?.id || null;
+                await this.renderHistoryDrawer();
+            } catch (e) {
+                console.warn('createConversation failed', e);
+            }
+        });
+        // Event delegation for conversation click
+        if (listEl && !listEl.__histBound) {
+            let lastClickAt = 0;
+            listEl.addEventListener('click', async (e) => {
+                const now = Date.now();
+                if (now - lastClickAt < 300) return; // debounce rapid clicks
+                lastClickAt = now;
+                if (this._loadingConversation) {
+                    console.debug('[HISTORY] ignoring click while loading');
+                    return;
+                }
+                const item = e.target.closest('.hist-item');
+                if (!item || !listEl.contains(item)) return;
+                const id = item.getAttribute('data-conv-id');
+                console.debug('[HISTORY] click item', { id, item, hasLoad: typeof this.loadConversation, thisOk: !!this });
+                if (!id) return;
+                // highlight active
+                listEl.querySelectorAll('.hist-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+                
+                // Pre-open main chat UI so user sees activity and hide left panel
+                try { this.setChatState('expanded-state'); this.hideUploadCardAndShowResponse(); } catch {}
+                
+                // Single-pass load only
+                try {
+                    const fn = this.loadConversation ? this.loadConversation.bind(this) : null;
+                    if (typeof fn !== 'function') {
+                        console.error('[HISTORY] loadConversation not callable', { type: typeof this.loadConversation });
+                        return;
+                    }
+                    await fn(id);
+                    console.debug('[HISTORY] loadConversation completed');
+                } catch (err) {
+                    console.error('history click load error', err);
+                }
+            });
+            listEl.__histBound = true;
+            console.debug('[HISTORY] delegation bound');
+        }
+
         // Training Data Modal
         this.initTrainingDataModal();
     }
@@ -454,6 +702,9 @@ class DesignRatingApp {
         const mainChatInput = document.getElementById('chatInput');
         const mainSendBtn = document.getElementById('sendBtn');
         const historyBtn = document.getElementById('historyBtn');
+        const historyDrawerToggle = document.getElementById('historyDrawerToggle');
+        const historyCloseBtn = document.getElementById('historyCloseBtn');
+        const historyNewBtn = document.getElementById('historyNewBtn');
         const chatToggleBtn = document.getElementById('chatToggleBtn');
         const chatCloseBtn = document.getElementById('chatCloseBtn');
         const chatOpenBtn = document.getElementById('chatOpenBtn');
@@ -464,14 +715,28 @@ class DesignRatingApp {
             this.sendMainChatMessage();
         });
         
-        // Show history on button click
-        if (historyBtn) {
-            historyBtn.addEventListener('click', () => {
-                console.log('History button clicked');
-                this.showMainChatHistory();
+        // Show history on button click (new bottom-right button)
+        const newHistoryBtn = document.getElementById('historyBtn');
+        if (newHistoryBtn) {
+            newHistoryBtn.addEventListener('click', () => {
+                this.toggleHistoryDrawer(true);
+                this.renderHistoryDrawer();
             });
-        } else {
-            console.log('History button not found');
+        }
+        if (historyDrawerToggle) {
+            historyDrawerToggle.addEventListener('click', () => {
+                this.toggleHistoryDrawer(true);
+                this.renderHistoryDrawer();
+            });
+        }
+        if (historyCloseBtn) {
+            historyCloseBtn.addEventListener('click', () => this.toggleHistoryDrawer(false));
+        }
+        if (historyNewBtn) {
+            historyNewBtn.addEventListener('click', async () => {
+                await this.createConversation();
+                await this.refreshConversationsIntoDrawer();
+            });
         }
         
         // Send message on Enter key
@@ -548,7 +813,345 @@ class DesignRatingApp {
         }
     }
     
+    async showConversationHistory() {
+        if (!this.accessToken) {
+            alert('Please sign in to view conversation history');
+            return;
+        }
+        
+        try {
+            const conversations = await this.loadConversations();
+            const historyContainer = document.getElementById('chatResultsContent');
+            
+            if (conversations.length === 0) {
+                historyContainer.innerHTML = '<div class="placeholder-text">No conversations yet</div>';
+                return;
+            }
+            
+            const historyHTML = conversations.map(conv => `
+                <div class="conversation-item" style="padding: 8px; border: 1px solid #ddd; margin: 4px 0; border-radius: 4px; cursor: pointer;" onclick="app.loadConversation('${conv.id}')">
+                    <div style="font-weight: bold;">${conv.title || 'Untitled'}</div>
+                    <div style="font-size: 12px; color: #666;">${new Date(conv.updated_at).toLocaleString()}</div>
+                </div>
+            `).join('');
+            
+            historyContainer.innerHTML = `
+                <div style="padding: 16px;">
+                    <h3>Conversation History</h3>
+                    <div>${historyHTML}</div>
+                </div>
+            `;
+        } catch (error) {
+            console.error('Failed to load conversations:', error);
+            alert('Failed to load conversation history');
+        }
+    }
+
+    toggleHistoryDrawer(open) {
+        const drawer = document.getElementById('historyDrawer');
+        if (!drawer) return;
+        if (typeof open === 'boolean') {
+            drawer.style.transform = open ? 'translateX(0)' : 'translateX(-100%)';
+        } else {
+            const isOpen = drawer.style.transform === 'translateX(0)';
+            drawer.style.transform = isOpen ? 'translateX(-100%)' : 'translateX(0)';
+        }
+    }
+
+    async refreshConversationsIntoDrawer() {
+        try {
+            const list = document.getElementById('historyDrawerList');
+            if (!list) return;
+            const conversations = await this.loadConversations();
+            if (!conversations || conversations.length === 0) {
+                list.innerHTML = '<div style="padding:16px;color:#94a3b8;">No conversations yet</div>';
+                return;
+            }
+            list.innerHTML = conversations.map(conv => `
+                <div class="history-conv-item" data-id="${conv.id}" style="padding:12px 14px;border-bottom:1px solid #111827;cursor:pointer;${conv.id===this.currentConversationId?'background:#1f2937;border-left:3px solid #60a5fa;':''}">
+                    <div style="font-size:14px;color:#e5e7eb;">${this.escapeHtml(conv.title || this.generateTitleFromMessage('') || 'Untitled conversation')}</div>
+                    <div style="font-size:12px;color:#94a3b8;margin-top:2px;">${new Date(conv.updated_at||conv.created_at).toLocaleString()}</div>
+                </div>
+            `).join('');
+            list.querySelectorAll('.history-conv-item').forEach(el => {
+                el.addEventListener('click', async () => {
+                    const id = el.getAttribute('data-id');
+                    await this.loadConversation(id);
+                    this.currentConversationId = id;
+                    await this.refreshConversationsIntoDrawer();
+                    this.toggleHistoryDrawer(false);
+                });
+            });
+        } catch (e) {
+            console.error('Failed to load conversations into drawer', e);
+        }
+    }
+
+    async renderHistoryDrawer() {
+        const listEl = document.getElementById('historyDrawerList');
+        if (!listEl) return;
+        console.debug('[HISTORY] render start');
+        listEl.innerHTML = '<div style="padding:12px;color:#94a3b8;">Loading…</div>';
+        try {
+            const conversations = await this.loadConversations();
+            console.debug('[HISTORY] conversations', { count: conversations?.length });
+            if (!Array.isArray(conversations) || conversations.length === 0) {
+                listEl.innerHTML = '<div style="padding:12px;color:#94a3b8;">No conversations yet</div>';
+                return;
+            }
+            const currentId = this.currentConversationId;
+            const html = conversations.map(c => {
+                const title = (c.title && String(c.title).trim()) || '(no title yet)';
+                const active = currentId && c.id === currentId;
+                return `
+                    <div data-conv-id="${c.id}" class="hist-item${active ? ' active' : ''}" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #1f2937;${active ? 'background:#111827;' : ''}">
+                        <div style=\"font-size:14px;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\">${this.escapeHtml(title)}</div>
+                        ${c.page_name ? `<div style=\"font-size:12px;color:#9ca3af;\">${this.escapeHtml(c.page_name)}</div>` : ''}
+                    </div>`;
+            }).join('');
+            listEl.innerHTML = html;
+            console.debug('[HISTORY] render done');
+        } catch (e) {
+            console.error('[HISTORY] render failed', e);
+            listEl.innerHTML = `<div style=\"padding:12px;color:#ef4444;\">Failed to load history</div>`;
+        }
+    }
+
+    async loadConversation(conversationId) {
+        try {
+            if (this._loadingConversation) {
+                console.debug('[CONV] already loading, ignoring click');
+                return;
+            }
+            this._loadingConversation = true;
+            this._historyView = true;
+            console.debug('[CONV] load start', { conversationId });
+            this.currentConversationId = conversationId;
+
+            // Prepare UI
+            this.resetMainChatUI();
+
+            // Load messages
+            const messages = await this.loadMessages(conversationId);
+            console.debug('[CONV] messages fetched', { count: messages?.length });
+            try {
+                const diag = (messages || []).slice(0, 6).map(m => ({
+                    role: m.role,
+                    hasContent: m.content != null,
+                    contentType: typeof m.content,
+                    hasValue: m?.content?.value !== undefined,
+                    valueType: typeof (m?.content?.value),
+                    isArray: Array.isArray(m?.content?.value),
+                    arrayLen: Array.isArray(m?.content?.value) ? m.content.value.length : undefined,
+                }));
+                console.debug('[CONV] diag sample', diag);
+                const firstUser = (messages || []).find(x => (x.role||'').toLowerCase()==='user');
+                if (firstUser) {
+                    const raw = firstUser.content !== undefined ? firstUser.content : firstUser.message;
+                    console.debug('[CONV] firstUser raw', raw);
+                }
+            } catch {}
+
+            // Clear main chat history
+            this.mainChatHistory = [];
+            this.chatMemory = [];
+
+            // Filter out non-final assistant chunks
+            const cleaned = Array.isArray(messages) ? messages.filter(m => {
+                const role = (m.role || '').toLowerCase();
+                if (role !== 'assistant') return true;
+                return m.is_final === true || m.chunk_index == null;
+            }) : [];
+            console.debug('[CONV] cleaned count', { count: cleaned.length });
+
+            // Normalize and push
+            cleaned.forEach(msg => {
+                const role = (msg.role || '').toLowerCase();
+                const raw = (msg.content !== undefined ? msg.content : msg.message);
+                const value = (raw && typeof raw === 'object' && raw.value !== undefined) ? raw.value : raw;
+                if (Array.isArray(value)) {
+                    const parts = [];
+                    for (const p of value) {
+                        if (p?.type === 'text' && typeof p.text === 'string') {
+                            parts.push({ kind: 'text', text: p.text });
+                        } else if (p?.type === 'image_url' && p.image_url?.url) {
+                            parts.push({ kind: 'image', src: p.image_url.url });
+                        } else if (typeof p === 'string') {
+                            parts.push({ kind: 'text', text: p });
+                        }
+                    }
+                    this.chatMemory.push({ role, contentParts: parts });
+                } else {
+                    const normalized = this.normalizeContentAsText(value);
+                    this.chatMemory.push({ role, content: normalized });
+                }
+            });
+
+            // Inject preview synthetic user image message at the top if not already present
+            try {
+                if (this._previewFirstUserMsg) {
+                    const exists = this.chatMemory.some(m => m.role === 'user' && typeof m.content === 'string' && m.content.includes(this._previewImageSrc || ''));
+                    if (!exists) {
+                        // If there is already a first user message, prefix the image marker to it
+                        const firstUserIndex = this.chatMemory.findIndex(m => m.role === 'user');
+                        if (firstUserIndex !== -1) {
+                            const firstUser = this.chatMemory[firstUserIndex];
+                            if (typeof firstUser.content === 'string') {
+                                firstUser.content = `[image: ${this._previewImageSrc}]\n` + firstUser.content;
+                            }
+                        } else {
+                            this.chatMemory.unshift(this._previewFirstUserMsg);
+                        }
+                    }
+                }
+            } catch {}
+
+            // We render directly inside the conversation (right panel); left panel stays hidden
+            this.showMainChatHistory();
+            console.debug('[CONV] rendered main chat');
+
+            // Force-inject preview image if not present in DOM after render
+            try {
+                if (this._previewImageSrc) {
+                    const chatResultsContent = document.getElementById('chatResultsContent');
+                    if (chatResultsContent) {
+                        const existsImg = chatResultsContent.querySelector(`img[src="${this._previewImageSrc}"]`);
+                        if (!existsImg) {
+                            const wrapper = document.createElement('div');
+                            wrapper.className = 'chat-message user-message';
+                            wrapper.innerHTML = `
+                                <div class="message-header"><span class="message-sender">You</span><span class="message-time"></span></div>
+                                <div class="message-content"><img src="${this._previewImageSrc}" alt="image" style="max-width: 260px; border-radius: 10px; display:block;"></div>
+                            `;
+                            const historyContainer = chatResultsContent.querySelector('.chat-history-content');
+                            if (historyContainer) historyContainer.insertAdjacentElement('afterbegin', wrapper);
+                        }
+                    }
+                }
+            } catch {}
+
+            await this.renderHistoryDrawer();
+
+            // Close drawer & blur
+            const drawer = document.getElementById('historyDrawer');
+            if (drawer) {
+                drawer.style.transform = 'translateX(-100%)';
+                drawer.setAttribute('aria-hidden', 'true');
+                try { if (document.activeElement) document.activeElement.blur(); } catch {}
+            }
+
+            // Re-trigger inspirations off the last command-like message
+            try {
+                const lastAssistant = [...this.chatMemory].reverse().find(m => m.role === 'assistant');
+                const lastUser = [...this.chatMemory].reverse().find(m => m.role === 'user');
+                const lastCmdMsg = [...this.chatMemory].reverse().find(m => typeof m.content === 'string' && /command\s*:?.*send\s+[a-z0-9]+/i.test(m.content));
+                if (lastCmdMsg && typeof lastCmdMsg.content === 'string') await this.handleCommand(lastCmdMsg.content);
+                // Also attempt on last assistant and user texts (no-op if not a command)
+                if (lastAssistant && typeof lastAssistant.content === 'string') {
+                    try { await this.handleCommand(lastAssistant.content); } catch {}
+                }
+                if (lastUser && typeof lastUser.content === 'string') {
+                    try { await this.handleCommand(lastUser.content); } catch {}
+                }
+            } catch {}
+
+        } catch (error) {
+            console.error('Failed to load conversation:', error);
+            const chatResultsContent = document.getElementById('chatResultsContent');
+            if (chatResultsContent) chatResultsContent.innerHTML = '<div class="placeholder-text">Failed to load conversation</div>';
+        } finally {
+            this._loadingConversation = false;
+        }
+    }
+
+    showConversationMessages(messages) {
+        // This method is now deprecated - use loadConversation instead
+        console.warn('showConversationMessages is deprecated, use loadConversation instead');
+    }
+
+    generateTitleFromMessage(message) {
+        try {
+            let text = typeof message === 'string' ? message : '';
+            text = text.trim();
+            if (!text) return '';
+            text = text.replace(/^please\s+/i, '')
+                       .replace(/^can you\s+/i, '')
+                       .replace(/^could you\s+/i, '');
+            const words = text.split(/\s+/).slice(0, 8).join(' ');
+            const titled = words.charAt(0).toUpperCase() + words.slice(1);
+            return titled;
+        } catch(_) { return ''; }
+    }
+
+    escapeHtml(str) {
+        return String(str||'').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[s]));
+    }
+    
+    async loadConversation(conversationId) {
+        try {
+            const messages = await this.loadMessages(conversationId);
+            console.debug('[CONV] diag sample messages', messages.slice(0, 2));
+            const firstUserMessage = messages.find(m => m.role === 'user');
+            if (firstUserMessage) {
+                console.debug('[CONV] firstUser raw content', firstUserMessage.content);
+            }
+            this.currentConversationId = conversationId;
+            
+            const historyContainer = document.getElementById('chatResultsContent');
+	            const historyHTML = messages.map(msg => {
+	                let contentHtml = '';
+	                const c = msg && msg.content ? msg.content : null;
+	                if (c && c.type === 'multimodal' && Array.isArray(c.value)) {
+	                    for (const part of c.value) {
+	                        const partType = part && (part.type || part.kind);
+	                        if (partType === 'text') {
+	                            const textVal = typeof part.text === 'string' ? part.text : (typeof part.value === 'string' ? part.value : '');
+	                            contentHtml += `<div>${this.formatContent(textVal)}</div>`;
+	                        } else if (partType === 'image_url' || partType === 'image') {
+	                            const src = (part.image_url && (part.image_url.url || part.image_url)) || part.src || '';
+	                            if (src) {
+	                                contentHtml += `<img src="${src}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
+	                            }
+	                        }
+	                    }
+	                    if (!contentHtml) contentHtml = '<div></div>';
+	                } else if (c && typeof c.value === 'string') {
+	                    contentHtml = this.formatContent(c.value);
+	                } else if (typeof c === 'string') {
+	                    contentHtml = this.formatContent(c);
+	                } else {
+	                    // Fallback: try to stringify
+	                    try {
+	                        contentHtml = this.formatContent(JSON.stringify(c));
+	                    } catch(_) {
+	                        contentHtml = '<div></div>';
+	                    }
+	                }
+	                return `
+	                <div class="chat-message ${msg.role}-message" style="margin: 8px 0; padding: 8px; border-radius: 4px; background: ${msg.role === 'user' ? '#f0f0f0' : '#e3f2fd'};">
+	                    <div style="font-weight: bold; margin-bottom: 4px;">${msg.role === 'user' ? 'You' : 'AI'}</div>
+	                    <div>${contentHtml}</div>
+	                </div>`;
+	            }).join('');
+            
+            historyContainer.innerHTML = `
+                <div style="padding: 16px;">
+                    <h3>Conversation</h3>
+                    <div>${historyHTML}</div>
+                </div>
+            `;
+        } catch (error) {
+            console.error('Failed to load conversation:', error);
+            alert('Failed to load conversation');
+        }
+    }
+
     async sendMainChatMessage() {
+        if (!this.accessToken) {
+            alert('Please sign in to send messages');
+            return;
+        }
+        
         const mainChatInput = document.getElementById('chatInput');
         const mainChatTags = document.getElementById('mainChatTags');
         const chatResultsContent = document.getElementById('chatResultsContent');
@@ -614,7 +1217,25 @@ class DesignRatingApp {
             return;
         }
         
-        // Find the most recent card with images (optional)
+        // Collect all images from tagged cards
+        const taggedImages = [];
+        for (const tagElement of tagElements) {
+            const parentCard = tagElement.dataset.parentCard;
+            if (parentCard) {
+                const cardId = parseInt(parentCard);
+                const cardData = this.cardData.get(cardId);
+                if (cardData && cardData.uploadedImages) {
+                    Object.values(cardData.uploadedImages).forEach(img => {
+                        taggedImages.push({
+                            type: 'image_url',
+                            image_url: { url: img.url, detail: 'auto' }
+                        });
+                    });
+                }
+            }
+        }
+        
+        // Find the most recent card with images (fallback)
         const mostRecentCardId = this.findMostRecentCardWithImages();
         
         // Clear input and tags
@@ -635,17 +1256,24 @@ class DesignRatingApp {
         this.hideUploadCardAndShowResponse();
         
         try {
-            // Optional image
-            let imageUrl = null;
-            if (mostRecentCardId) {
+            // Create multimodal message with all images (original format that worked)
+            let msgPayload = fullMessage;
+            if (taggedImages.length > 0) {
+                msgPayload = [
+                    { type: 'text', text: fullMessage },
+                    ...taggedImages
+                ];
+            } else if (mostRecentCardId) {
+                // Fallback to most recent card if no tagged images
                 const cardData = this.cardData.get(mostRecentCardId);
                 const firstKey = cardData ? Object.keys(cardData.uploadedImages)[0] : null;
-                if (firstKey) imageUrl = cardData.uploadedImages[firstKey].url;
+                if (firstKey) {
+                    msgPayload = [
+                        { type: 'text', text: fullMessage },
+                        { type: 'image_url', image_url: { url: cardData.uploadedImages[firstKey].url, detail: 'auto' } }
+                    ];
+                }
             }
-            const msgPayload = imageUrl ? [
-                { type: 'text', text: fullMessage },
-                { type: 'image_url', image_url: { url: imageUrl, detail: 'auto' } }
-            ] : fullMessage;
 
             let streamedText = '';
             await this.sendChat({
@@ -658,20 +1286,34 @@ class DesignRatingApp {
                     streamedText = full;
                     this.showResponseInCard(full);
                 },
-                onDone: (finalText) => {
+                onDone: async (finalText) => {
                     this.mainChatHistory.push({
                         timestamp: new Date().toISOString(),
                         cardId: mostRecentCardId || 'main-chat',
                         message: fullMessage,
                         response: finalText || 'Done',
-                        conversationId: null
+                        conversationId: this.currentConversationId
                     });
                     this.appendHistory(fullMessage, finalText || '');
                     this.stopLoadingMessages();
                     this.showMainChatHistory();
                     this.hideQuickActionButtons();
+                    // Refresh history drawer to show new conversation
+                    this.renderHistoryDrawer();
                     this.handleCommand(finalText || '');
                     this.handleCommand(fullMessage);
+                    // Set summarized title immediately after first user message
+                    try {
+                        const title = this.generateTitleFromMessage(fullMessage) || 'New conversation';
+                        if (title && this.currentConversationId) {
+                            await fetch(`${this.backendUrl}/conversations/${this.currentConversationId}`, {
+                                method: 'PUT',
+                                headers: this.getAuthHeaders(),
+                                body: JSON.stringify({ title })
+                            });
+                            this.renderHistoryDrawer();
+                        }
+                    } catch (_) {}
                 }
             });
         } catch (error) {
@@ -705,7 +1347,62 @@ class DesignRatingApp {
     // Display centralized conversation summary in main chat
     showMainChatHistory() {
         const chatResultsContent = document.getElementById('chatResultsContent');
-        if (!chatResultsContent || this.mainChatHistory.length === 0) {
+        if (!chatResultsContent) {
+            return;
+        }
+        
+        // Show chat memory if available (loaded conversation)
+        if (this.chatMemory && this.chatMemory.length > 0) {
+            const renderItem = (msg) => {
+                const role = msg.role || '';
+                const isUser = role === 'user';
+                let contentHtml = '';
+                if (Array.isArray(msg.contentParts)) {
+                    for (const part of msg.contentParts) {
+                        if (part.kind === 'text') {
+                            contentHtml += `<div>${this.formatContent(part.text)}</div>`;
+                        } else if (part.kind === 'image') {
+                            contentHtml += `<img src="${part.src}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
+                        }
+                    }
+                    if (!contentHtml) contentHtml = '<div></div>';
+                } else {
+                    const { imgSrc, strippedText } = this.extractImageFromContent(msg.content || '');
+                    if (imgSrc) {
+                        const safeText = this.escapeHtml(strippedText);
+                        contentHtml = `${safeText ? `<div>${safeText}</div>` : ''}<img src="${imgSrc}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
+                    } else {
+                        contentHtml = this.formatContent(msg.content || '');
+                    }
+                }
+                const sender = isUser ? 'You' : 'AI';
+                const messageClass = isUser ? 'user-message' : 'agent-message';
+                return `
+                    <div class="chat-message ${messageClass}">
+                        <div class="message-header">
+                            <span class="message-sender">${sender}</span>
+                            <span class="message-time"></span>
+                        </div>
+                        <div class="message-content">${contentHtml}</div>
+                    </div>
+                `;
+            };
+
+            const historyHTML = this.chatMemory.map(renderItem).join('');
+            
+            chatResultsContent.innerHTML = `
+                <div class="chat-history-container">
+                    <div class="chat-history-content">
+                        ${historyHTML}
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        // Fallback to mainChatHistory if no chatMemory
+        if (this.mainChatHistory.length === 0) {
+            chatResultsContent.innerHTML = '<div class="placeholder-text">No conversation yet</div>';
             return;
         }
         
@@ -1170,6 +1867,11 @@ class DesignRatingApp {
     }
     
     async sendMessage(cardId) {
+        if (!this.accessToken) {
+            alert('Please sign in to send messages');
+            return;
+        }
+        
         const chatInput = document.getElementById(`chatInput-${cardId}`);
         const chatTags = document.getElementById(`chatTags-${cardId}`);
         const message = chatInput.value.trim();
@@ -1233,7 +1935,7 @@ class DesignRatingApp {
         this.showCardChatHistory(cardId);
         
         try {
-            // Prepare multimodal message if image present
+            // Prepare multimodal message if image present (original format that worked)
             let imageUrl = null;
             const firstKey = Object.keys(cardData.uploadedImages)[0];
             if (firstKey) imageUrl = cardData.uploadedImages[firstKey].url;
@@ -1835,8 +2537,11 @@ class DesignRatingApp {
     
     // Format content with basic markdown-like formatting
     formatContent(content) {
+        // Ensure we have a string
+        const text = typeof content === 'string' ? content : this.normalizeContentAsText(content);
+        
         // First, handle emoji toggle lists
-        let formattedContent = this.createEmojiToggleLists(content);
+        let formattedContent = this.createEmojiToggleLists(text);
         
         return formattedContent
             .replace(/\*\*(.*?)\*\*/g, '$1')                   // Remove bold markers from titles
@@ -1849,7 +2554,8 @@ class DesignRatingApp {
     
     // Format content without toggle lists (for flow cards)
     formatContentWithoutToggle(content) {
-        return content
+        const text = typeof content === 'string' ? content : this.normalizeContentAsText(content);
+        return text
             .replace(/\*\*(.*?)\*\*/g, '$1')                   // Remove bold markers from titles
             .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
             .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #007bff; text-decoration: underline;">$2</a>')  // Convert markdown links to clickable blue links
@@ -1860,7 +2566,8 @@ class DesignRatingApp {
     
     // Create toggle lists for lines starting with emojis
     createEmojiToggleLists(content) {
-        const lines = content.split('\n');
+        const base = typeof content === 'string' ? content : this.normalizeContentAsText(content);
+        const lines = String(base).split('\n');
         const result = [];
         let i = 0;
         
@@ -2164,7 +2871,15 @@ Product: E-commerce App | Industry: Retail | Platform: Web
     handleQuickAction(action, cardId) {
         const chatInput = document.getElementById(`chatInput-${cardId}`);
         if (chatInput) {
-            chatInput.value = action;
+            // Map quick actions to more specific prompts
+            const actionPrompts = {
+                'rate this design': 'Please rate this design and provide detailed feedback on its strengths and areas for improvement.',
+                'quick UI check': 'Please perform a quick UI/UX review of this design, focusing on usability, visual hierarchy, and user experience.',
+                'find inspirations for this': 'Please find and suggest design inspirations and references that could improve this design.'
+            };
+            
+            const prompt = actionPrompts[action] || action;
+            chatInput.value = prompt;
             this.sendMessage(cardId);
         }
     }
@@ -2187,9 +2902,10 @@ Product: E-commerce App | Industry: Retail | Platform: Web
             uploadCardsStack.style.display = 'none';
         }
         
+        // Hard-disable left rating panel
         if (feedbackCard) {
-            feedbackCard.classList.add('visible');
-            feedbackCard.style.display = 'flex';
+            feedbackCard.classList.remove('visible');
+            feedbackCard.style.display = 'none';
         }
     }
     
@@ -2612,6 +3328,147 @@ Product: E-commerce App | Industry: Retail | Platform: Web
             count: uploadedCount,
             flowId: `${appName}_${flowName}_${Date.now()}` // Generate a simple flow ID
         };
+    }
+
+    // Normalize any message content (string | array | object) into displayable text
+    normalizeContentAsText(raw) {
+        try {
+            if (raw == null) return '';
+            // If backend stored { type, value }
+            if (typeof raw === 'object' && !Array.isArray(raw) && raw.value !== undefined) {
+                return this.normalizeContentAsText(raw.value);
+            }
+            // If multimodal array
+            if (Array.isArray(raw)) {
+                const parts = [];
+                for (const item of raw) {
+                    if (!item) continue;
+                    if (typeof item === 'string') {
+                        parts.push(item);
+                    } else if (item.type === 'text' && typeof item.text === 'string') {
+                        parts.push(item.text);
+                    } else if (item.type === 'image_url' && item.image_url?.url) {
+                        parts.push(`[image: ${item.image_url.url}]`);
+                    } else {
+                        parts.push('[unsupported content]');
+                    }
+                }
+                return parts.join('\n');
+            }
+            // Plain string
+            if (typeof raw === 'string') return raw;
+            // Fallback
+            return JSON.stringify(raw);
+        } catch {
+            return String(raw || '');
+        }
+    }
+
+    // Reset main chat UI to the same state as a live conversation view
+    resetMainChatUI() {
+        try {
+            this.setChatState('expanded-state');
+        } catch {}
+        
+        // Hide left "Rating" panel entirely during history view
+        const feedbackCard = document.getElementById('feedbackCard');
+        const feedbackContent = document.getElementById('feedbackContent');
+        if (this._historyView) {
+            if (feedbackCard) feedbackCard.style.display = 'none';
+        } else {
+            // Live flow
+            if (feedbackCard) {
+                feedbackCard.classList.add('visible');
+                feedbackCard.style.display = 'flex';
+                const titleEl = feedbackCard.querySelector('.card-title');
+                if (titleEl) titleEl.textContent = 'AI Response';
+            }
+            if (feedbackContent) {
+                feedbackContent.innerHTML = '<div class="placeholder-text">Loading conversation…</div>';
+            }
+        }
+        
+        // Stop any rotating loaders everywhere
+        this.stopLoadingMessages();
+        const resultsContentEls = document.querySelectorAll('[id^="resultsContent-"]');
+        resultsContentEls.forEach(el => { el.innerHTML = ''; });
+        // Hide quick actions to match live state after first message
+        this.hideQuickActionButtons();
+    }
+
+    async quickPreviewFromMessages(conversationId) {
+        // Fetch messages quickly and render the first image immediately, also trigger inspirations
+        try {
+            const msgs = await this.loadMessages(conversationId);
+            if (!Array.isArray(msgs)) return;
+            // Find an image in user messages (data url, http url, or image_url object)
+            let imgSrc = null;
+            for (const m of msgs) {
+                if ((m.role || '').toLowerCase() !== 'user') continue;
+                const content = (m.content !== undefined ? m.content : m.message);
+                // Handle stored {type,value}
+                const value = (content && typeof content === 'object' && content.value !== undefined) ? content.value : content;
+                if (Array.isArray(value)) {
+                    for (const part of value) {
+                        if (part?.type === 'image_url' && part.image_url?.url) { imgSrc = part.image_url.url; break; }
+                        if (typeof part === 'string' && /^https?:\/\//i.test(part)) { imgSrc = part; break; }
+                    }
+                } else if (typeof value === 'string') {
+                    const dataUrlPattern = /(data:image\/(?:png|jpg|jpeg|gif|webp);base64,[A-Za-z0-9+/=\r\n]+)/i;
+                    const httpPattern = /(https?:\/\/[^\s]+\.(?:png|jpg|jpeg|gif|webp)(?:\?[^\s]*)?)/i;
+                    const mm = value.match(dataUrlPattern) || value.match(httpPattern);
+                    if (mm) imgSrc = mm[1];
+                }
+                if (imgSrc) break;
+            }
+            // Persist for merging during full render as a synthetic first user message
+            this._previewImageSrc = imgSrc || null;
+            this._previewFirstUserMsg = imgSrc ? { role: 'user', content: `[image: ${imgSrc}]` } : null;
+            if (imgSrc) {
+                const chatResultsContent = document.getElementById('chatResultsContent');
+                if (chatResultsContent) {
+                    chatResultsContent.innerHTML = `
+                        <div class=\"chat-history-container\">
+                            <div class=\"chat-history-content\">
+                                <div class=\"chat-message user-message\">
+                                    <div class=\"message-header\"><span class=\"message-sender\">You</span><span class=\"message-time\"></span></div>
+                                    <div class=\"message-content\"><img src=\"${imgSrc}\" alt=\"image\" style=\"max-width: 260px; border-radius: 10px; display:block;\"></div>
+                                </div>
+                            </div>
+                        </div>`;
+                }
+            }
+            // Trigger inspirations ASAP from the newest assistant/user text
+            const newestText = [...msgs].reverse().map(m => {
+                const v = (m.content !== undefined ? m.content : m.message);
+                const vv = (v && typeof v === 'object' && v.value !== undefined) ? v.value : v;
+                if (typeof vv === 'string') return vv; return null;
+            }).find(Boolean);
+            if (newestText) {
+                try { await this.handleCommand(newestText); } catch {}
+            }
+        } catch (e) {
+            console.warn('[PREVIEW] failed', e);
+        }
+    }
+
+    // Extract image (data URL or http) from possibly multi-line content prefixed with "[image:" and return { imgSrc, strippedText }
+    extractImageFromContent(raw) {
+        const text = typeof raw === 'string' ? raw : this.normalizeContentAsText(raw);
+        if (!text) return { imgSrc: null, strippedText: '' };
+        // Grab everything after [image: (multi-line)
+        const afterMarker = text.match(/\[image:\s*([\s\S]*)$/i);
+        const searchArea = afterMarker ? afterMarker[1] : text;
+        // Find data URL or http image URL inside
+        const dataMatch = searchArea.match(/data:image\/(?:png|jpg|jpeg|gif|webp);base64,[A-Za-z0-9+/=\r\n]+/i);
+        const httpMatch = searchArea.match(/https?:\/\/\S+?\.(?:png|jpg|jpeg|gif|webp)(?:\?\S*)?/i);
+        const src = (dataMatch ? dataMatch[0] : (httpMatch ? httpMatch[0] : null));
+        if (!src) return { imgSrc: null, strippedText: text };
+        const cleanSrc = src.replace(/\s+/g, '');
+        // Remove the marker block and the src from text
+        let stripped = text.replace(/\[image:[\s\S]*$/i, '');
+        stripped = stripped.replace(src, '').trim();
+        return { imgSrc: cleanSrc, strippedText: stripped };
     }
 }
 

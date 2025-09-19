@@ -16,6 +16,20 @@
 <body>
     <!-- Main Container -->
     <div class="main-container">
+        <!-- Left-side History Drawer -->
+        <button id="historyDrawerToggle" title="Open history" style="position: fixed; left: 12px; top: 25%; z-index: 1100; background: #1f2937; color: #fff; border: none; border-radius: 0 8px 8px 0; padding: 10px 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+            &#x23F2;
+        </button>
+        <aside id="historyDrawer" aria-hidden="true" style="position: fixed; top: 0; left: 0; height: 100vh; width: 320px; background: #0f172a; color: #e2e8f0; transform: translateX(-100%); transition: transform 0.25s ease; z-index: 1099; display: flex; flex-direction: column; border-right: 1px solid #1f2937;">
+            <div style="padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #1f2937;">
+                <div style="display:flex; align-items:center; gap: 8px; font-weight: 600;">History</div>
+                <div style="display:flex; gap: 8px;">
+                    <button id="historyNewBtn" style="background:#1f2937;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:6px 10px;cursor:pointer;">New</button>
+                    <button id="historyCloseBtn" style="background:#1f2937;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:6px 10px;cursor:pointer;">×</button>
+                </div>
+            </div>
+            <div id="historyDrawerList" style="flex:1; overflow-y:auto;"></div>
+        </aside>
         <!-- Upload Cards Stack -->
         <div class="upload-cards-stack" id="uploadCardsStack">
             <!-- Initial Upload Card -->
@@ -137,11 +151,6 @@
                 <div class="chat-tags" id="mainChatTags"></div>
                 <input type="text" id="chatInput" placeholder="Ask something..." />
             </div>
-            <button id="historyBtn" class="history-btn" title="Show conversation history">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
-                </svg>
-            </button>
             <button id="sendBtn" class="send-btn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7l5-5 5 5z"/>
@@ -162,7 +171,7 @@
     <!-- Training Data Link -->
     <a href="#" class="training-data-link" id="trainingDataLink">training data</a>
     
-    <!-- Debug Segmented Control -->
+    <!-- Debug Controls -->
     <div class="debug-controls">
         <div class="debug-segmented-control">
             <button class="debug-segment active" data-state="initial-state">Initial</button>
@@ -170,6 +179,17 @@
             <button class="debug-segment" data-state="expanded-state">Expanded</button>
             <button class="debug-segment" data-state="collapsed-state">Collapsed</button>
         </div>
+    </div>
+    
+    <!-- Auth and History Controls -->
+    <div style="position: fixed; bottom: 16px; right: 16px; z-index: 1000; display: flex; align-items: center; gap: 12px; background: white; padding: 8px 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div id="authContainer"></div>
+        <button id="historyBtn" style="padding: 6px 12px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+            </svg>
+            History
+        </button>
     </div>
     
     <!-- Training Data Modal -->
@@ -204,6 +224,31 @@
         </div>
     </div>
     
+    <div id="root"></div>
+    <!-- Auth Modal -->
+    <div id="authModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:2000; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+        <div style="background:#fff; width:400px; max-width:90vw; border-radius:16px; box-shadow:0 20px 40px rgba(0,0,0,0.3); overflow:hidden; animation:modalSlideIn 0.3s ease-out;">
+            <div style="padding:20px 24px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
+                <div style="font-weight:600; font-size:18px; color:#1f2937;">Welcome to Design Canvas</div>
+                <button id="authModalClose" style="border:none; background:transparent; font-size:24px; cursor:pointer; color:#6b7280; padding:4px; border-radius:4px; transition:background 0.2s;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">×</button>
+            </div>
+            <div style="padding:24px;">
+                <div style="font-size:16px; color:#374151; margin-bottom:16px; line-height:1.5;">Sign in to start rating designs and accessing your conversation history.</div>
+                <input id="authEmailInput" type="email" placeholder="Enter your email address" style="width:100%; padding:12px 16px; border:2px solid #e5e7eb; border-radius:8px; font-size:16px; transition:border-color 0.2s; box-sizing:border-box;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#e5e7eb'" />
+                <button id="authEmailSubmit" style="margin-top:16px; width:100%; padding:12px 16px; background:#1f2937; color:#fff; border:none; border-radius:8px; cursor:pointer; font-size:16px; font-weight:500; transition:background 0.2s;" onmouseover="this.style.background='#111827'" onmouseout="this.style.background='#1f2937'">Send magic link</button>
+                <div id="authHint" style="font-size:14px; color:#6b7280; margin-top:12px; text-align:center;">We'll send you a secure sign-in link via email</div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: scale(0.9) translateY(-20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+    </style>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
+    <!-- <script type="module" src="/src/main.tsx"></script> -->
 </body>
 </html>

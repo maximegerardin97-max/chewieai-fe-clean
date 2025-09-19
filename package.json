@@ -1,14 +1,27 @@
 {
   "name": "canva",
   "version": "1.0.0",
-  "main": "script.js",
+  "main": "index.html",
   "scripts": {
-    "start": "open index.html",
-    "dev": "python3 -m http.server 8000",
+    "start": "vite",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": ["canvas", "image", "drag-drop", "shadcn", "ui", "ai", "dust"],
   "author": "",
   "license": "ISC",
-  "description": "A beautiful image canvas built with ShadCN design principles, connected to Dust.tt AI agent"
+  "description": "A beautiful image canvas built with ShadCN design principles, connected to Dust.tt AI agent",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8"
+  }
 }
