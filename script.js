@@ -314,14 +314,14 @@ class DesignRatingApp {
         return compressed;
     }
 
-    async compressImage(dataUrl, maxWidth = 1024, quality = 0.8) {
+    async compressImage(dataUrl, maxWidth = 512, quality = 0.6) {
         return new Promise((resolve, reject) => {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                // Calculate new dimensions
+                // Calculate new dimensions - more aggressive compression
                 let { width, height } = img;
                 if (width > maxWidth) {
                     height = (height * maxWidth) / width;
