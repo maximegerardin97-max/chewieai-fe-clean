@@ -287,7 +287,7 @@ class DesignRatingApp {
         } catch (_) {}
         
         // Non-streaming: send message to backend
-        const resp = await fetch(`${this.backendUrl}/chat`, {
+        const resp = await fetch(`${this.backendUrl}/api-chat`, {
             method: 'POST',
             headers: this.getAuthHeaders(),
             body: JSON.stringify({
@@ -311,7 +311,7 @@ class DesignRatingApp {
 
     async createConversation() {
         if (!this.accessToken) { this.showAuthModal(); throw new Error('Please sign in first'); }
-        const resp = await fetch(`${this.backendUrl}/conversations`, {
+        const resp = await fetch(`${this.backendUrl}/api-conversations`, {
             method: 'POST',
             headers: this.getAuthHeaders(),
             body: JSON.stringify({})
@@ -323,7 +323,7 @@ class DesignRatingApp {
 
     async loadConversations() {
         if (!this.accessToken) { this.showAuthModal(); return []; }
-        const resp = await fetch(`${this.backendUrl}/conversations`, {
+        const resp = await fetch(`${this.backendUrl}/api-conversations`, {
             headers: this.getAuthHeaders()
         });
         if (!resp.ok) throw new Error(`Load conversations failed: ${resp.status}`);
@@ -333,7 +333,7 @@ class DesignRatingApp {
 
     async loadMessages(conversationId) {
         if (!this.accessToken) { this.showAuthModal(); return []; }
-        const resp = await fetch(`${this.backendUrl}/messages?conversation_id=${conversationId}`, {
+        const resp = await fetch(`${this.backendUrl}/api-messages?conversation_id=${conversationId}`, {
             headers: this.getAuthHeaders()
         });
         if (!resp.ok) throw new Error(`Load messages failed: ${resp.status}`);
