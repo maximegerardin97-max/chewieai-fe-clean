@@ -1,4 +1,4 @@
-// Simple Design Rating App
+do // Simple Design Rating App
 const COMMAND_RE = /command\s*:?\s*send\s+([a-z0-9.]+)\s+(.+)/i;
 
 // ------------------------------------------------------------
@@ -15,7 +15,7 @@ class DesignRatingApp {
         this.supabaseUrl = cfg.SUPABASE_URL || '';
         this.supabaseKey = cfg.SUPABASE_ANON || '';
         this.chatUrl = cfg.CHAT_URL || '';
-        this.backendUrl = 'http://localhost:3000/api';
+        this.backendUrl = 'https://iiolvvdnzrfcffudwocp.supabase.co/functions/v1';
         this.supabaseClient = null;
         this.accessToken = null;
         this.userEmail = null;
