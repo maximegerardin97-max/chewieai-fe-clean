@@ -153,7 +153,11 @@ class DesignRatingApp {
         try {
             const { error } = await this.supabaseClient.auth.signInWithOtp({
                 email,
-                options: { emailRedirectTo: `${window.location.origin}` },
+                options: { 
+                    emailRedirectTo: process.env.NODE_ENV === 'production' 
+                        ? 'https://maximegerardin97-max.github.io/chewieai-fe-clean'
+                        : `${window.location.origin}` 
+                },
             });
             if (error) throw error;
             alert('Magic link sent. Check your email.');
@@ -182,7 +186,11 @@ class DesignRatingApp {
             try {
                 const { error } = await this.supabaseClient.auth.signInWithOtp({
                     email,
-                    options: { emailRedirectTo: `${window.location.origin}` },
+                    options: { 
+                        emailRedirectTo: process.env.NODE_ENV === 'production' 
+                            ? 'https://maximegerardin97-max.github.io/chewieai-fe-clean'
+                            : `${window.location.origin}` 
+                    },
                 });
                 if (error) throw error;
                 submitBtn.textContent = 'Link sent ✅';
