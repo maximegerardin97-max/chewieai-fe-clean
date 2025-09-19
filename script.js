@@ -259,15 +259,38 @@ class DesignRatingApp {
             throw new Error('Not authenticated');
         }
         console.log('[AUTH] Using token:', this.accessToken.substring(0, 20) + '...');
+        console.log('[AUTH] Token length:', this.accessToken.length);
+        console.log('[AUTH] Token starts with:', this.accessToken.substring(0, 10));
         return {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${this.accessToken}`
         };
     }
 
+    async testJWTToken() {
+        if (!this.accessToken) return false;
+        try {
+            const resp = await fetch(`${this.backendUrl}/api-conversations`, {
+                headers: this.getAuthHeaders()
+            });
+            console.log('[JWT TEST] Response status:', resp.status);
+            return resp.ok;
+        } catch (e) {
+            console.log('[JWT TEST] Error:', e.message);
+            return false;
+        }
+    }
+
     async sendChat({ provider, model, systemPrompt, message, history, onDelta, onDone }) {
         if (!this.accessToken) { this.showAuthModal(); throw new Error('Please sign in first'); }
         console.log('[SENDCHAT] Starting with token:', this.accessToken ? 'present' : 'missing');
+        
+        // Test JWT token validity
+        const isValid = await this.testJWTToken();
+        console.log('[SENDCHAT] JWT token valid:', isValid);
+        if (!isValid) {
+            throw new Error('JWT token is invalid. Please sign out and sign back in.');
+        }
         
         // Ensure we have a conversation
         if (!this.currentConversationId) {
