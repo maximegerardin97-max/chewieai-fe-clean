@@ -330,8 +330,22 @@ class DesignRatingApp {
             throw new Error(errorMessage);
         }
         const data = await resp.json();
-        const assistant = data?.message;
-        const assistantText = assistant?.content?.value ?? assistant?.content ?? '';
+        console.log('[SENDCHAT] Response data:', data);
+        
+        // Handle different response formats
+        let assistantText = '';
+        if (typeof data.message === 'string') {
+            // Direct string response from Edge Function
+            assistantText = data.message;
+        } else if (data.message?.content) {
+            // Nested content response
+            assistantText = data.message.content?.value ?? data.message.content ?? '';
+        } else {
+            // Fallback
+            assistantText = data.message || '';
+        }
+        
+        console.log('[SENDCHAT] Extracted assistant text:', assistantText);
         if (onDelta) onDelta(assistantText, assistantText);
         if (onDone) onDone(assistantText);
         return assistantText;
