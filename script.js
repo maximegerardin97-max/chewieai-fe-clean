@@ -397,7 +397,7 @@ class DesignRatingApp {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         
-        const resp = await fetch(`${this.backendUrl}/api-chat`, {
+        const resp = await fetch(`${this.backendUrl}/api-chat-simple`, {
             method: 'POST',
             headers: this.getAuthHeaders(),
             body: JSON.stringify({
