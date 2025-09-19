@@ -15,7 +15,7 @@ class DesignRatingApp {
         this.supabaseUrl = cfg.SUPABASE_URL || '';
         this.supabaseKey = cfg.SUPABASE_ANON || '';
         this.chatUrl = cfg.CHAT_URL || '';
-        this.backendUrl = 'http://localhost:3000/api';
+        this.backendUrl = 'https://iiolvvdnzrfcffudwocp.supabase.co/functions/v1';
         this.supabaseClient = null;
         this.accessToken = null;
         this.userEmail = null;
@@ -287,7 +287,7 @@ class DesignRatingApp {
         } catch (_) {}
         
         // Non-streaming: send message to backend
-        const resp = await fetch(`${this.backendUrl}/messages`, {
+        const resp = await fetch(`${this.backendUrl}/chat`, {
             method: 'POST',
             headers: this.getAuthHeaders(),
             body: JSON.stringify({
