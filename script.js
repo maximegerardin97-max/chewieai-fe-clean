@@ -1,4 +1,4 @@
-do // Simple Design Rating App
+// Simple Design Rating App 
 const COMMAND_RE = /command\s*:?\s*send\s+([a-z0-9.]+)\s+(.+)/i;
 
 // ------------------------------------------------------------
