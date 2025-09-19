@@ -258,6 +258,7 @@ class DesignRatingApp {
         if (!this.accessToken) {
             throw new Error('Not authenticated');
         }
+        console.log('[AUTH] Using token:', this.accessToken.substring(0, 20) + '...');
         return {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${this.accessToken}`
@@ -266,6 +267,7 @@ class DesignRatingApp {
 
     async sendChat({ provider, model, systemPrompt, message, history, onDelta, onDone }) {
         if (!this.accessToken) { this.showAuthModal(); throw new Error('Please sign in first'); }
+        console.log('[SENDCHAT] Starting with token:', this.accessToken ? 'present' : 'missing');
         
         // Ensure we have a conversation
         if (!this.currentConversationId) {
@@ -299,7 +301,10 @@ class DesignRatingApp {
         });
         
         if (!resp.ok) {
-            throw new Error(`Backend HTTP ${resp.status}`);
+            const errorData = await resp.json().catch(() => ({}));
+            console.log('[SENDCHAT] Error response:', resp.status, errorData);
+            const errorMessage = errorData.error || errorData.message || `Backend HTTP ${resp.status}`;
+            throw new Error(errorMessage);
         }
         const data = await resp.json();
         const assistant = data?.message;
