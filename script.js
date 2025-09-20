@@ -1071,6 +1071,26 @@ class DesignRatingApp {
                 }
             });
 
+            // Also populate mainChatHistory for compatibility
+            this.mainChatHistory = [];
+            cleaned.forEach(msg => {
+                const role = (msg.role || '').toLowerCase();
+                const raw = (msg.content !== undefined ? msg.content : msg.message);
+                const value = (raw && typeof raw === 'object' && raw.value !== undefined) ? raw.value : raw;
+                
+                if (role === 'user') {
+                    this.mainChatHistory.push({
+                        timestamp: msg.created_at || new Date().toISOString(),
+                        message: Array.isArray(value) ? value.map(p => p.text || p).join(' ') : value,
+                        response: ''
+                    });
+                } else if (role === 'assistant') {
+                    if (this.mainChatHistory.length > 0) {
+                        this.mainChatHistory[this.mainChatHistory.length - 1].response = Array.isArray(value) ? value.map(p => p.text || p).join(' ') : value;
+                    }
+                }
+            });
+
             // Inject preview synthetic user image message at the top if not already present
             try {
                 if (this._previewFirstUserMsg) {
@@ -3687,6 +3707,57 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         }
     }
 
+    // Generate conversation summary from first user message
+    generateConversationSummary(message) {
+        if (!message) return 'New Conversation';
+        
+        // Handle multimodal messages
+        let textContent = '';
+        if (Array.isArray(message)) {
+            // Extract text from multimodal message
+            textContent = message
+                .filter(item => item.type === 'text')
+                .map(item => item.text)
+                .join(' ')
+                .trim();
+        } else if (typeof message === 'string') {
+            textContent = message;
+        }
+        
+        if (!textContent) return 'New Conversation';
+        
+        // Create a summary (first 50 characters + ellipsis if longer)
+        const summary = textContent.length > 50 
+            ? textContent.substring(0, 50).trim() + '...'
+            : textContent;
+            
+        return summary;
+    }
+
+    // Update conversation title with summary
+    async updateConversationTitle(conversationId, title) {
+        if (!this.accessToken) {
+            throw new Error('Not authenticated');
+        }
+
+        try {
+            const resp = await fetch(`${this.backendUrl}/conversations/${conversationId}`, {
+                method: 'PUT',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify({ title })
+            });
+
+            if (!resp.ok) {
+                console.warn(`Failed to update conversation title: ${resp.status}`);
+                return;
+            }
+
+            console.log('[CONVERSATION] Updated title:', title);
+        } catch (error) {
+            console.error('[CONVERSATION] Error updating title:', error);
+        }
+    }
+
     // Send chat message to production Supabase Edge Function
     async sendChat({ provider, model, systemPrompt, message, history, onDelta, onDone }) {
         if (!this.accessToken) {
@@ -3739,6 +3810,12 @@ Product: E-commerce App | Industry: Retail | Platform: Web
             // Call onDone with the final response
             if (onDone) {
                 onDone(data.response || data.message || '');
+            }
+
+            // Update conversation title with summary from first message
+            if (this.currentConversationId && message) {
+                const summary = this.generateConversationSummary(message);
+                await this.updateConversationTitle(this.currentConversationId, summary);
             }
 
             return data;
