@@ -1627,30 +1627,45 @@ class DesignRatingApp {
                 </div>
             `;
             
-                // Force visibility with aggressive styling
-                chatResultsContent.style.display = 'block !important';
-                chatResultsContent.style.visibility = 'visible !important';
-                chatResultsContent.style.height = 'auto !important';
-                chatResultsContent.style.minHeight = '400px !important';
-                chatResultsContent.style.maxHeight = 'none !important';
-                chatResultsContent.style.overflow = 'visible !important';
-                chatResultsContent.style.width = '100% !important';
-                chatResultsContent.style.position = 'relative !important';
-                chatResultsContent.style.zIndex = '999 !important';
-                
-                // Also force the parent container
-                const chatResultsContainer = document.getElementById('chatResultsContainer');
-                if (chatResultsContainer) {
-                    chatResultsContainer.style.display = 'block !important';
-                    chatResultsContainer.style.height = 'auto !important';
-                    chatResultsContainer.style.minHeight = '400px !important';
-                    chatResultsContainer.style.overflow = 'visible !important';
-                }
+            // Force visibility with aggressive styling
+            chatResultsContent.style.setProperty('display', 'block', 'important');
+            chatResultsContent.style.setProperty('visibility', 'visible', 'important');
+            chatResultsContent.style.setProperty('height', 'auto', 'important');
+            chatResultsContent.style.setProperty('min-height', '400px', 'important');
+            chatResultsContent.style.setProperty('max-height', 'none', 'important');
+            chatResultsContent.style.setProperty('overflow', 'visible', 'important');
+            chatResultsContent.style.setProperty('width', '100%', 'important');
+            chatResultsContent.style.setProperty('position', 'relative', 'important');
+            chatResultsContent.style.setProperty('z-index', '999', 'important');
+            chatResultsContent.style.setProperty('padding', '20px', 'important');
+            chatResultsContent.style.setProperty('box-sizing', 'border-box', 'important');
+
+            // Also force the parent container
+            const chatResultsContainer = document.getElementById('chatResultsContainer');
+            if (chatResultsContainer) {
+                chatResultsContainer.style.setProperty('display', 'block', 'important');
+                chatResultsContainer.style.setProperty('height', 'auto', 'important');
+                chatResultsContainer.style.setProperty('min-height', '400px', 'important');
+                chatResultsContainer.style.setProperty('overflow', 'visible', 'important');
+                chatResultsContainer.style.setProperty('padding', '20px', 'important');
+                chatResultsContainer.style.setProperty('box-sizing', 'border-box', 'important');
+            }
             console.log('[CHAT] Set innerHTML, chatResultsContent now has:', chatResultsContent.innerHTML.length, 'characters');
-            console.log('[CHAT] chatResultsContent display:', chatResultsContent.style.display);
-            console.log('[CHAT] chatResultsContent visibility:', chatResultsContent.style.visibility);
-            console.log('[CHAT] chatResultsContent height:', chatResultsContent.offsetHeight);
-            console.log('[CHAT] chatResultsContent width:', chatResultsContent.offsetWidth);
+            
+            // Force a reflow and check dimensions after a short delay
+            setTimeout(() => {
+                console.log('[CHAT] After timeout - chatResultsContent height:', chatResultsContent.offsetHeight);
+                console.log('[CHAT] After timeout - chatResultsContent width:', chatResultsContent.offsetWidth);
+                
+                // If still collapsed, force it with even more aggressive styling
+                if (chatResultsContent.offsetHeight === 0) {
+                    console.log('[CHAT] Container still collapsed, forcing with more aggressive styling');
+                    chatResultsContent.style.setProperty('height', '500px', 'important');
+                    chatResultsContent.style.setProperty('min-height', '500px', 'important');
+                    chatResultsContent.style.setProperty('display', 'flex', 'important');
+                    chatResultsContent.style.setProperty('flex-direction', 'column', 'important');
+                }
+            }, 100);
             console.log('[CHAT] chatResultsContent parent:', chatResultsContent.parentElement);
             
             // FORCE SHOW THE CHAT UI
