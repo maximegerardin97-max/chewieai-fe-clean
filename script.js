@@ -15,7 +15,7 @@ class DesignRatingApp {
         this.supabaseUrl = cfg.SUPABASE_URL || '';
         this.supabaseKey = cfg.SUPABASE_ANON || '';
         this.chatUrl = cfg.CHAT_URL || '';
-        this.backendUrl = "https://iiolvvdnzrfcffudwocp.supabase.co/functions/v1/llm-proxy-simple";
+        this.backendUrl = "https://iiolvvdnzrfcffudwocp.supabase.co/functions/v1/llm-proxy-auth";
         this.supabaseClient = null;
         this.accessToken = null;
         this.userEmail = null;
@@ -216,28 +216,37 @@ class DesignRatingApp {
         modal.style.display = 'none';
     }
 
+    async signOut() {
+        if (this.supabaseClient) {
+            await this.supabaseClient.auth.signOut();
+        }
+        this.accessToken = null;
+        this.userEmail = null;
+        this.currentConversationId = null;
+        this.updateAuthUI();
+    }
+
     async loadSharedSettings() {
-        if (!this.supabaseUrl || !this.supabaseKey) return null;
-        const url = `${this.supabaseUrl}/rest/v1/app_settings?select=system_prompt,provider,model&key=eq.default`;
-        const resp = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'apikey': this.supabaseKey,
-                'Authorization': `Bearer ${this.supabaseKey}`,
-                'Accept': 'application/json'
+        if (!this.accessToken) return null;
+        try {
+            const resp = await fetch(`${this.backendUrl}/settings`, {
+                method: 'GET',
+                headers: this.getAuthHeaders()
+            });
+            if (!resp.ok) {
+                console.warn('loadSharedSettings failed', resp.status);
+                return null;
             }
-        });
-        if (!resp.ok) {
-            console.warn('loadSharedSettings failed', resp.status);
+            const data = await resp.json();
+            return {
+                systemPrompt: data.system_prompt || '',
+                provider: data.provider || '',
+                model: data.model || ''
+            };
+        } catch (error) {
+            console.warn('loadSharedSettings error:', error);
             return null;
         }
-        const rows = await resp.json();
-        const row = Array.isArray(rows) ? rows[0] : null;
-        return row ? {
-            systemPrompt: row.system_prompt || '',
-            provider: row.provider || '',
-            model: row.model || ''
-        } : null;
     }
 
     appendHistory(userText, assistantText) {
@@ -269,17 +278,6 @@ class DesignRatingApp {
 
     async testJWTToken() {
         if (!this.accessToken) return false;
-        try {
-            const resp = await fetch(`${this.backendUrl}/test`, {
-                headers: this.getAuthHeaders()
-            });
-            console.log('[JWT TEST] Response status:', resp.status);
-            return resp.ok;
-        } catch (e) {
-            console.log('[JWT TEST] Error:', e.message);
-            return false;
-        }
-    }
         try {
             const resp = await fetch(`${this.backendUrl}/test`, {
                 headers: this.getAuthHeaders()
@@ -357,7 +355,7 @@ class DesignRatingApp {
 
     async createConversation() {
         if (!this.accessToken) { this.showAuthModal(); throw new Error('Please sign in first'); }
-        const resp = await fetch(`${this.backendUrl}/test`, {
+        const resp = await fetch(`${this.backendUrl}/conversations`, {
             method: 'POST',
             headers: this.getAuthHeaders(),
             body: JSON.stringify({})
@@ -369,7 +367,7 @@ class DesignRatingApp {
 
     async loadConversations() {
         if (!this.accessToken) { this.showAuthModal(); return []; }
-        const resp = await fetch(`${this.backendUrl}/test`, {
+        const resp = await fetch(`${this.backendUrl}/conversations`, {
             headers: this.getAuthHeaders()
         });
         if (!resp.ok) throw new Error(`Load conversations failed: ${resp.status}`);
@@ -379,12 +377,42 @@ class DesignRatingApp {
 
     async loadMessages(conversationId) {
         if (!this.accessToken) { this.showAuthModal(); return []; }
-        const resp = await fetch(`${this.backendUrl}/test?conversation_id=${conversationId}`, {
+        const resp = await fetch(`${this.backendUrl}/messages?conversation_id=${conversationId}`, {
             headers: this.getAuthHeaders()
         });
         if (!resp.ok) throw new Error(`Load messages failed: ${resp.status}`);
         const data = await resp.json();
         return data.messages || [];
+    }
+
+    async loadKnowledgeBase() {
+        if (!this.accessToken) { this.showAuthModal(); return []; }
+        try {
+            const resp = await fetch(`${this.backendUrl}/knowledge`, {
+                headers: this.getAuthHeaders()
+            });
+            if (!resp.ok) throw new Error(`Load knowledge base failed: ${resp.status}`);
+            const data = await resp.json();
+            return data || [];
+        } catch (error) {
+            console.error('Knowledge base error:', error);
+            return [];
+        }
+    }
+
+    async loadStats() {
+        if (!this.accessToken) { this.showAuthModal(); return null; }
+        try {
+            const resp = await fetch(`${this.backendUrl}/stats`, {
+                headers: this.getAuthHeaders()
+            });
+            if (!resp.ok) throw new Error(`Load stats failed: ${resp.status}`);
+            const data = await resp.json();
+            return data || null;
+        } catch (error) {
+            console.error('Stats error:', error);
+            return null;
+        }
     }
     
     // Conversation context management methods
@@ -1375,7 +1403,7 @@ class DesignRatingApp {
                     try {
                         const title = this.generateTitleFromMessage(fullMessage) || 'New conversation';
                         if (title && this.currentConversationId) {
-                            await fetch(`${this.backendUrl}/test/${this.currentConversationId}`, {
+                            await fetch(`${this.backendUrl}/conversations/${this.currentConversationId}`, {
                                 method: 'PUT',
                                 headers: this.getAuthHeaders(),
                                 body: JSON.stringify({ title })
@@ -2858,12 +2886,9 @@ Product: E-commerce App | Industry: Retail | Platform: Web
             console.debug('[INSPIRATIONS REQUEST]', { app, flow, screens: screenNums });
 
             // Call backend with flow and optional screen numbers
-            const resp = await fetch(`${this.supabaseUrl}/functions/v1/inspirations`, {
+            const resp = await fetch(`${this.backendUrl}/inspirations`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.supabaseKey}`,
-                    'Content-Type': 'application/json'
-                },
+                headers: this.getAuthHeaders(),
                 body: JSON.stringify({ 
                     recommendation: { 
                         app, 
