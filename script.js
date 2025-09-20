@@ -3590,7 +3590,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
             this.renderHistoryDrawer(conversations);
         } catch (error) {
             console.error('[HISTORY] Error refreshing conversations:', error);
-            const historyList = document.getElementById('historyList');
+            const historyList = document.getElementById('historyDrawerList');
             if (historyList) {
                 historyList.innerHTML = '<div style="padding:12px;color:#ef4444;">Failed to load conversations</div>';
             }
@@ -3617,7 +3617,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
 
     // Render the history drawer with conversations
     renderHistoryDrawer(conversations = null) {
-        const historyList = document.getElementById('historyList');
+        const historyList = document.getElementById('historyDrawerList');
         if (!historyList) return;
 
         if (conversations) {
