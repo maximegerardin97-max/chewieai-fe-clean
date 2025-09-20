@@ -1569,12 +1569,17 @@ class DesignRatingApp {
                     const isUser = role === 'user';
                     let contentHtml = '';
                     if (Array.isArray(msg.contentParts)) {
+                        console.log('[CHAT] Processing contentParts:', msg.contentParts.length, 'parts');
                         for (const part of msg.contentParts) {
+                            console.log('[CHAT] Part:', part.kind, part.src ? part.src.substring(0, 100) + '...' : part.text?.substring(0, 100) + '...');
                             if (part.kind === 'text') {
                                 contentHtml += `<div>${this.formatContent(part.text)}</div>`;
                             } else if (part.kind === 'image') {
                                 console.log('[CHAT] Rendering image from contentParts:', part.src.substring(0, 100) + '...');
-                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
+                                console.log('[CHAT] Full image src length:', part.src.length);
+                                // Test with a simple image first
+                                contentHtml += `<div style="background: red; color: white; padding: 10px; margin: 10px 0;">TEST IMAGE SHOULD BE HERE</div>`;
+                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block; border: 2px solid red;">`;
                             }
                         }
                         if (!contentHtml) contentHtml = '<div></div>';
