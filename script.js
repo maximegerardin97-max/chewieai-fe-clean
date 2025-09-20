@@ -1247,6 +1247,55 @@ class DesignRatingApp {
             }
             this.currentConversationId = conversationId;
             
+            // Populate chatMemory and mainChatHistory for rendering
+            this.chatMemory = [];
+            this.mainChatHistory = [];
+            
+            messages.forEach(msg => {
+                const role = (msg.role || '').toLowerCase();
+                const raw = (msg.content !== undefined ? msg.content : msg.message);
+                const value = (raw && typeof raw === 'object' && raw.value !== undefined) ? raw.value : raw;
+                
+                if (Array.isArray(value)) {
+                    const parts = [];
+                    for (const p of value) {
+                        if (p?.type === 'text' && typeof p.text === 'string') {
+                            parts.push({ kind: 'text', text: p.text });
+                        } else if (p?.type === 'image_url' && p.image_url?.url) {
+                            parts.push({ kind: 'image', src: p.image_url.url });
+                        } else if (typeof p === 'string') {
+                            parts.push({ kind: 'text', text: p });
+                        }
+                    }
+                    this.chatMemory.push({ role, contentParts: parts });
+                } else {
+                    const normalized = this.normalizeContentAsText(value);
+                    this.chatMemory.push({ role, content: normalized });
+                }
+            });
+            
+            // Also populate mainChatHistory for compatibility
+            messages.forEach(msg => {
+                const role = (msg.role || '').toLowerCase();
+                const raw = (msg.content !== undefined ? msg.content : msg.message);
+                const value = (raw && typeof raw === 'object' && raw.value !== undefined) ? raw.value : raw;
+                
+                if (role === 'user') {
+                    this.mainChatHistory.push({
+                        timestamp: msg.created_at || new Date().toISOString(),
+                        message: Array.isArray(value) ? value.map(p => p.text || p).join(' ') : value,
+                        response: ''
+                    });
+                } else if (role === 'assistant') {
+                    if (this.mainChatHistory.length > 0) {
+                        this.mainChatHistory[this.mainChatHistory.length - 1].response = Array.isArray(value) ? value.map(p => p.text || p).join(' ') : value;
+                    }
+                }
+            });
+            
+            // RENDER THE CONVERSATION
+            this.showMainChatHistory();
+            
             const historyContainer = document.getElementById('chatResultsContent');
 	            const historyHTML = messages.map(msg => {
 	                let contentHtml = '';
