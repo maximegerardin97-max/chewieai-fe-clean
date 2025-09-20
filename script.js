@@ -15,7 +15,7 @@ class DesignRatingApp {
         this.supabaseUrl = cfg.SUPABASE_URL || '';
         this.supabaseKey = cfg.SUPABASE_ANON || '';
         this.chatUrl = cfg.CHAT_URL || '';
-        this.backendUrl = 'https://iiolvvdnzrfcffudwocp.supabase.co/functions/v1';
+        this.backendUrl = 'https://iiolvvdnzrfcffudwocp.supabase.co/functions/v1/llm-proxy';
         this.supabaseClient = null;
         this.accessToken = null;
         this.userEmail = null;
@@ -31,8 +31,8 @@ class DesignRatingApp {
         this.chatMemory = []; // last 10 turns (20 messages)
 
         // Shared settings from LLM Proxy
-        this.currentProvider = null;
-        this.currentModel = null;
+        this.currentProvider = 'anthropic'; // Default to Anthropic
+        this.currentModel = 'claude-3-5-sonnet-20241022';
         this.currentSystemPrompt = null;
         
         // Loading messages for creative feedback
@@ -394,8 +394,9 @@ class DesignRatingApp {
             message = compressedMessage;
         }
         
+        // Add a very long timeout to prevent browser timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes timeout
         
         const resp = await fetch(`${this.backendUrl}/api-chat`, {
             method: 'POST',
@@ -886,6 +887,21 @@ class DesignRatingApp {
                 this.sendMainChatMessage();
             }
         });
+
+        // Provider selection
+        const providerSelect = document.getElementById('providerSelect');
+        if (providerSelect) {
+            providerSelect.addEventListener('change', (e) => {
+                this.currentProvider = e.target.value;
+                // Update model based on provider
+                if (this.currentProvider === 'anthropic') {
+                    this.currentModel = 'claude-3-5-sonnet-20241022';
+                } else if (this.currentProvider === 'google') {
+                    this.currentModel = 'gemini-2.5-pro';
+                }
+                console.log('Provider switched to:', this.currentProvider, 'Model:', this.currentModel);
+            });
+        }
         
         // Toggle chat collapse/expand
         chatToggleBtn.addEventListener('click', () => {
@@ -3590,6 +3606,64 @@ Product: E-commerce App | Industry: Retail | Platform: Web
             }
         } catch (e) {
             console.warn('[PREVIEW] failed', e);
+        }
+    }
+
+    // Send chat message to production Supabase Edge Function
+    async sendChat({ provider, model, systemPrompt, message, history, onDelta, onDone }) {
+        if (!this.accessToken) {
+            throw new Error('Not authenticated');
+        }
+
+        try {
+            console.log('[SENDCHAT] Starting chat request to production server');
+            console.log('[SENDCHAT] Provider:', provider);
+            console.log('[SENDCHAT] Model:', model);
+            console.log('[SENDCHAT] Message type:', Array.isArray(message) ? 'multimodal' : 'text');
+
+            const resp = await fetch(this.backendUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.accessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    conversation_id: this.currentConversationId,
+                    message: message,
+                    provider: provider || 'anthropic',
+                    model: model || 'claude-3-5-sonnet-20241022',
+                    temperature: 0.7,
+                    maxTokens: 4000
+                })
+            });
+
+            console.log('[SENDCHAT] Response status:', resp.status);
+            console.log('[SENDCHAT] Response headers:', Object.fromEntries(resp.headers.entries()));
+
+            if (!resp.ok) {
+                const errorData = await resp.text();
+                console.error('[SENDCHAT] Error response:', errorData);
+                throw new Error(`Server error: ${resp.status} ${errorData}`);
+            }
+
+            const data = await resp.json();
+            console.log('[SENDCHAT] Response data:', data);
+
+            // Call onDelta with the full response immediately
+            if (onDelta) {
+                onDelta(null, data.response || data.message || '');
+            }
+
+            // Call onDone with the final response
+            if (onDone) {
+                onDone(data.response || data.message || '');
+            }
+
+            return data;
+
+        } catch (error) {
+            console.error('[SENDCHAT] Error:', error);
+            throw error;
         }
     }
 
