@@ -1588,8 +1588,10 @@ class DesignRatingApp {
                         const { imgSrc, strippedText } = this.extractImageFromContent(msg.content || '');
                         if (imgSrc) {
                             console.log('[CHAT] Rendering image from extractImageFromContent:', imgSrc.substring(0, 100) + '...');
+                            console.log('[CHAT] Full image src length:', imgSrc.length);
+                            // Test with a simple image first
                             const safeText = this.escapeHtml(strippedText);
-                            contentHtml = `${safeText ? `<div>${safeText}</div>` : ''}<img src="${imgSrc}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
+                            contentHtml = `${safeText ? `<div>${safeText}</div>` : ''}<div style="background: red; color: white; padding: 10px; margin: 10px 0;">TEST IMAGE SHOULD BE HERE</div><img src="${imgSrc}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block; border: 2px solid red;">`;
                         } else {
                             console.log('[CHAT] No image found, using formatContent');
                             contentHtml = this.formatContent(msg.content || '');
