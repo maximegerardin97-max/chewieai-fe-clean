@@ -1009,7 +1009,7 @@ class DesignRatingApp {
             }
             this._loadingConversation = true;
             this._historyView = true;
-            console.debug('[CONV] load start', { conversationId });
+            console.log('[CONV] load start', { conversationId });
             this.currentConversationId = conversationId;
 
             // Prepare UI
@@ -1017,7 +1017,7 @@ class DesignRatingApp {
 
             // Load messages
             const messages = await this.loadMessages(conversationId);
-            console.debug('[CONV] messages fetched', { count: messages?.length });
+            console.log('[CONV] messages fetched', { count: messages?.length });
             try {
                 const diag = (messages || []).slice(0, 6).map(m => ({
                     role: m.role,
@@ -1028,11 +1028,11 @@ class DesignRatingApp {
                     isArray: Array.isArray(m?.content?.value),
                     arrayLen: Array.isArray(m?.content?.value) ? m.content.value.length : undefined,
                 }));
-                console.debug('[CONV] diag sample', diag);
+                console.log('[CONV] diag sample', diag);
                 const firstUser = (messages || []).find(x => (x.role||'').toLowerCase()==='user');
                 if (firstUser) {
                     const raw = firstUser.content !== undefined ? firstUser.content : firstUser.message;
-                    console.debug('[CONV] firstUser raw', raw);
+                    console.log('[CONV] firstUser raw', raw);
                 }
             } catch {}
 
@@ -1046,7 +1046,7 @@ class DesignRatingApp {
                 if (role !== 'assistant') return true;
                 return m.is_final === true || m.chunk_index == null;
             }) : [];
-            console.debug('[CONV] cleaned count', { count: cleaned.length });
+            console.log('[CONV] cleaned count', { count: cleaned.length });
 
             // Normalize and push
             cleaned.forEach(msg => {
@@ -1114,7 +1114,7 @@ class DesignRatingApp {
             console.log('[CONV] About to call showMainChatHistory');
             console.log('[CONV] chatMemory before showMainChatHistory:', this.chatMemory);
             this.showMainChatHistory();
-            console.debug('[CONV] rendered main chat');
+            console.log('[CONV] rendered main chat');
             
             // Force show the main chat area
             const floatingChat = document.getElementById('floatingChat');
@@ -1170,7 +1170,8 @@ class DesignRatingApp {
             } catch {}
 
         } catch (error) {
-            console.error('Failed to load conversation:', error);
+            console.error('[CONV] Failed to load conversation:', error);
+            console.error('[CONV] Error stack:', error.stack);
             const chatResultsContent = document.getElementById('chatResultsContent');
             if (chatResultsContent) chatResultsContent.innerHTML = '<div class="placeholder-text">Failed to load conversation</div>';
         } finally {
