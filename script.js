@@ -1113,6 +1113,14 @@ class DesignRatingApp {
             // We render directly inside the conversation (right panel); left panel stays hidden
             this.showMainChatHistory();
             console.debug('[CONV] rendered main chat');
+            
+            // Force show the main chat area
+            const floatingChat = document.getElementById('floatingChat');
+            if (floatingChat) {
+                floatingChat.style.display = 'flex';
+                floatingChat.classList.remove('collapsed-state');
+                floatingChat.classList.add('expanded-state');
+            }
 
             // Force-inject preview image if not present in DOM after render
             try {
@@ -1165,6 +1173,41 @@ class DesignRatingApp {
             if (chatResultsContent) chatResultsContent.innerHTML = '<div class="placeholder-text">Failed to load conversation</div>';
         } finally {
             this._loadingConversation = false;
+        }
+    }
+
+    // Reset main chat UI for loading a conversation
+    resetMainChatUI() {
+        console.log('[CONV] Resetting main chat UI');
+        
+        // Clear any existing chat content
+        const chatResultsContent = document.getElementById('chatResultsContent');
+        if (chatResultsContent) {
+            chatResultsContent.innerHTML = '<div class="placeholder-text">Loading conversation...</div>';
+        }
+        
+        // Clear input
+        const mainChatInput = document.getElementById('chatInput');
+        if (mainChatInput) {
+            mainChatInput.value = '';
+        }
+        
+        // Clear tags
+        const mainChatTags = document.getElementById('mainChatTags');
+        if (mainChatTags) {
+            mainChatTags.innerHTML = '';
+        }
+        
+        // Show the main chat
+        const floatingChat = document.getElementById('floatingChat');
+        if (floatingChat) {
+            floatingChat.style.display = 'flex';
+        }
+        
+        // Hide the chat open button
+        const chatOpenBtn = document.getElementById('chatOpenBtn');
+        if (chatOpenBtn) {
+            chatOpenBtn.style.display = 'none';
         }
     }
 
@@ -3657,8 +3700,11 @@ Product: E-commerce App | Industry: Retail | Platform: Web
 
             // Add click listeners to conversation items
             historyList.querySelectorAll('.history-item').forEach(item => {
-                item.addEventListener('click', () => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     const conversationId = item.dataset.conversationId;
+                    console.log('[HISTORY] Clicked conversation:', conversationId);
                     this.loadConversation(conversationId);
                     this.toggleHistoryDrawer(false);
                 });
