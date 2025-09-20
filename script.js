@@ -1620,6 +1620,22 @@ class DesignRatingApp {
             console.log('[CHAT] chatResultsContent height:', chatResultsContent.offsetHeight);
             console.log('[CHAT] chatResultsContent width:', chatResultsContent.offsetWidth);
             console.log('[CHAT] chatResultsContent parent:', chatResultsContent.parentElement);
+            
+            // FORCE SHOW THE CHAT UI
+            const floatingChat = document.getElementById('floatingChat');
+            if (floatingChat) {
+                floatingChat.style.display = 'flex';
+                floatingChat.classList.remove('collapsed-state');
+                floatingChat.classList.add('expanded-state');
+                console.log('[CHAT] Forced floatingChat to show');
+            }
+            
+            // HIDE THE HISTORY DRAWER
+            const historyDrawer = document.getElementById('historyDrawer');
+            if (historyDrawer) {
+                historyDrawer.style.display = 'none';
+                console.log('[CHAT] Hid history drawer');
+            }
             return;
         }
         
