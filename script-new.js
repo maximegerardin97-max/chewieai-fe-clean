@@ -1622,11 +1622,13 @@ class DesignRatingApp {
                 </div>
             `;
             
-            // Force visibility
-            chatResultsContent.style.display = 'block';
-            chatResultsContent.style.visibility = 'visible';
-            chatResultsContent.style.height = 'auto';
-            chatResultsContent.style.overflow = 'visible';
+                // Force visibility
+                chatResultsContent.style.display = 'block';
+                chatResultsContent.style.visibility = 'visible';
+                chatResultsContent.style.height = 'auto';
+                chatResultsContent.style.minHeight = '400px';
+                chatResultsContent.style.overflow = 'visible';
+                chatResultsContent.style.width = '100%';
             console.log('[CHAT] Set innerHTML, chatResultsContent now has:', chatResultsContent.innerHTML.length, 'characters');
             console.log('[CHAT] chatResultsContent display:', chatResultsContent.style.display);
             console.log('[CHAT] chatResultsContent visibility:', chatResultsContent.style.visibility);
