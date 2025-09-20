@@ -3533,6 +3533,122 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         }
     }
 
+    // Load conversations from database
+    async loadConversations() {
+        if (!this.accessToken) {
+            throw new Error('Not authenticated');
+        }
+
+        try {
+            const resp = await fetch(`${this.backendUrl}/conversations`, {
+                method: 'GET',
+                headers: this.getAuthHeaders()
+            });
+
+            if (!resp.ok) {
+                throw new Error(`Failed to load conversations: ${resp.status}`);
+            }
+
+            const data = await resp.json();
+            console.log('[CONVERSATIONS] Loaded conversations:', data);
+            return data;
+        } catch (error) {
+            console.error('[CONVERSATIONS] Error loading conversations:', error);
+            throw error;
+        }
+    }
+
+    // Load messages for a conversation
+    async loadMessages(conversationId) {
+        if (!this.accessToken) {
+            throw new Error('Not authenticated');
+        }
+
+        try {
+            const resp = await fetch(`${this.backendUrl}/messages?conversation_id=${conversationId}`, {
+                method: 'GET',
+                headers: this.getAuthHeaders()
+            });
+
+            if (!resp.ok) {
+                throw new Error(`Failed to load messages: ${resp.status}`);
+            }
+
+            const data = await resp.json();
+            console.log('[MESSAGES] Loaded messages for conversation:', conversationId, data);
+            return data;
+        } catch (error) {
+            console.error('[MESSAGES] Error loading messages:', error);
+            throw error;
+        }
+    }
+
+    // Refresh conversations in the history drawer
+    async refreshConversationsIntoDrawer() {
+        try {
+            const conversations = await this.loadConversations();
+            this.renderHistoryDrawer(conversations);
+        } catch (error) {
+            console.error('[HISTORY] Error refreshing conversations:', error);
+            const historyList = document.getElementById('historyList');
+            if (historyList) {
+                historyList.innerHTML = '<div style="padding:12px;color:#ef4444;">Failed to load conversations</div>';
+            }
+        }
+    }
+
+    // Toggle history drawer visibility
+    toggleHistoryDrawer(show = null) {
+        const historyDrawer = document.getElementById('historyDrawer');
+        if (!historyDrawer) return;
+
+        if (show === null) {
+            // Toggle current state
+            show = historyDrawer.style.display !== 'block';
+        }
+
+        if (show) {
+            historyDrawer.style.display = 'block';
+            this.refreshConversationsIntoDrawer();
+        } else {
+            historyDrawer.style.display = 'none';
+        }
+    }
+
+    // Render the history drawer with conversations
+    renderHistoryDrawer(conversations = null) {
+        const historyList = document.getElementById('historyList');
+        if (!historyList) return;
+
+        if (conversations) {
+            if (conversations.length === 0) {
+                historyList.innerHTML = '<div style="padding:12px;color:#666;">No conversations yet</div>';
+                return;
+            }
+
+            const conversationsHTML = conversations.map(conv => `
+                <div class="history-item" data-conversation-id="${conv.id}" style="padding: 8px; border-bottom: 1px solid #eee; cursor: pointer;">
+                    <div style="font-weight: bold;">${conv.title || 'Untitled'}</div>
+                    <div style="font-size: 12px; color: #666;">${new Date(conv.created_at).toLocaleDateString()}</div>
+                </div>
+            `).join('');
+
+            historyList.innerHTML = conversationsHTML;
+
+            // Add click listeners to conversation items
+            historyList.querySelectorAll('.history-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const conversationId = item.dataset.conversationId;
+                    this.loadConversation(conversationId);
+                    this.toggleHistoryDrawer(false);
+                });
+            });
+        } else {
+            // Load conversations if not provided
+            this.refreshConversationsIntoDrawer();
+        }
+    }
+
     // Create a new conversation
     async createConversation() {
         if (!this.accessToken) {
