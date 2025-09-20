@@ -15,7 +15,7 @@ class DesignRatingApp {
         this.supabaseUrl = cfg.SUPABASE_URL || '';
         this.supabaseKey = cfg.SUPABASE_ANON || '';
         this.chatUrl = cfg.CHAT_URL || '';
-        this.backendUrl = "https://iiolvvdnzrfcffudwocp.supabase.co/functions/v1/llm-proxy";
+        this.backendUrl = "https://iiolvvdnzrfcffudwocp.supabase.co/functions/v1/llm-proxy-simple";
         this.supabaseClient = null;
         this.accessToken = null;
         this.userEmail = null;
