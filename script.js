@@ -3668,9 +3668,16 @@ Product: E-commerce App | Industry: Retail | Platform: Web
 
             const data = await resp.json();
             console.log('[CONVERSATION] Response data:', data);
+            console.log('[CONVERSATION] Response status:', resp.status);
             
             // Handle both response formats: { conversation: {...} } or { id: ... }
             const conversation = data.conversation || data;
+            console.log('[CONVERSATION] Parsed conversation:', conversation);
+            
+            if (!conversation || !conversation.id) {
+                throw new Error(`Invalid conversation response: ${JSON.stringify(data)}`);
+            }
+            
             this.currentConversationId = conversation.id;
             console.log('[CONVERSATION] Created new conversation:', this.currentConversationId);
             return conversation;
