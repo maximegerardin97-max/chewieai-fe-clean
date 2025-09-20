@@ -3533,10 +3533,42 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         }
     }
 
+    // Create a new conversation
+    async createConversation() {
+        if (!this.accessToken) {
+            throw new Error('Not authenticated');
+        }
+
+        try {
+            const resp = await fetch(`${this.backendUrl}/conversations`, {
+                method: 'POST',
+                headers: this.getAuthHeaders(),
+                body: JSON.stringify({ title: 'New Conversation' })
+            });
+
+            if (!resp.ok) {
+                throw new Error(`Failed to create conversation: ${resp.status}`);
+            }
+
+            const data = await resp.json();
+            this.currentConversationId = data.conversation.id;
+            console.log('[CONVERSATION] Created new conversation:', this.currentConversationId);
+            return data.conversation;
+        } catch (error) {
+            console.error('[CONVERSATION] Error creating conversation:', error);
+            throw error;
+        }
+    }
+
     // Send chat message to production Supabase Edge Function
     async sendChat({ provider, model, systemPrompt, message, history, onDelta, onDone }) {
         if (!this.accessToken) {
             throw new Error('Not authenticated');
+        }
+
+        // Create conversation if we don't have one
+        if (!this.currentConversationId) {
+            await this.createConversation();
         }
 
         try {
@@ -3544,6 +3576,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
             console.log('[SENDCHAT] Provider:', provider);
             console.log('[SENDCHAT] Model:', model);
             console.log('[SENDCHAT] Message type:', Array.isArray(message) ? 'multimodal' : 'text');
+            console.log('[SENDCHAT] Conversation ID:', this.currentConversationId);
 
             const resp = await fetch(this.backendUrl, {
                 method: 'POST',
