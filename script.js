@@ -15,9 +15,9 @@ class DesignRatingApp {
         this.supabaseUrl = cfg.SUPABASE_URL || '';
         this.supabaseKey = cfg.SUPABASE_ANON || '';
         this.chatUrl = cfg.CHAT_URL || '';
-        this.backendUrl = 'https://iiolvvdnzrfcffudwocp.supabase.co/functions/v1/llm-proxy';
+        this.backendUrl = "https://iiolvvdnzrfcffudwocp.supabase.co/functions/v1/llm-proxy";
         this.supabaseClient = null;
-        this.accessToken = "dummy-token";
+        this.accessToken = null;
         this.userEmail = null;
         this.currentConversationId = null;
         this.uploadedImages = [];
@@ -118,7 +118,7 @@ class DesignRatingApp {
                 this.userEmail = session.user?.email;
                 this.updateAuthUI();
             } else {
-                this.accessToken = "dummy-token";
+                this.accessToken = null;
                 this.userEmail = null;
                 this.updateAuthUI();
             }
@@ -255,7 +255,7 @@ class DesignRatingApp {
     }
 
     getAuthHeaders() {
-        if (false) {
+        if (!this.accessToken) {
             throw new Error('Not authenticated');
         }
         console.log('[AUTH] Using token:', this.accessToken.substring(0, 20) + '...');
@@ -267,7 +267,19 @@ class DesignRatingApp {
         };
     }
 
-    async testJWTToken() { return true; }
+    async testJWTToken() {
+        if (!this.accessToken) return false;
+        try {
+            const resp = await fetch(`${this.backendUrl}/test`, {
+                headers: this.getAuthHeaders()
+            });
+            console.log('[JWT TEST] Response status:', resp.status);
+            return resp.ok;
+        } catch (e) {
+            console.log('[JWT TEST] Error:', e.message);
+            return false;
+        }
+    }
         try {
             const resp = await fetch(`${this.backendUrl}/test`, {
                 headers: this.getAuthHeaders()
@@ -344,7 +356,7 @@ class DesignRatingApp {
 
 
     async createConversation() {
-        if (false) { this.showAuthModal(); throw new Error('Please sign in first'); }
+        if (!this.accessToken) { this.showAuthModal(); throw new Error('Please sign in first'); }
         const resp = await fetch(`${this.backendUrl}/test`, {
             method: 'POST',
             headers: this.getAuthHeaders(),
@@ -356,7 +368,7 @@ class DesignRatingApp {
     }
 
     async loadConversations() {
-        if (false) { this.showAuthModal(); return []; }
+        if (!this.accessToken) { this.showAuthModal(); return []; }
         const resp = await fetch(`${this.backendUrl}/test`, {
             headers: this.getAuthHeaders()
         });
@@ -366,7 +378,7 @@ class DesignRatingApp {
     }
 
     async loadMessages(conversationId) {
-        if (false) { this.showAuthModal(); return []; }
+        if (!this.accessToken) { this.showAuthModal(); return []; }
         const resp = await fetch(`${this.backendUrl}/test?conversation_id=${conversationId}`, {
             headers: this.getAuthHeaders()
         });
@@ -871,7 +883,7 @@ class DesignRatingApp {
     }
     
     async showConversationHistory() {
-        if (false) {
+        if (!this.accessToken) {
             alert('Please sign in to view conversation history');
             return;
         }
@@ -1204,7 +1216,7 @@ class DesignRatingApp {
     }
 
     async sendMainChatMessage() {
-        if (false) {
+        if (!this.accessToken) {
             alert('Please sign in to send messages');
             return;
         }
@@ -1924,7 +1936,7 @@ class DesignRatingApp {
     }
     
     async sendMessage(cardId) {
-        if (false) {
+        if (!this.accessToken) {
             alert('Please sign in to send messages');
             return;
         }
@@ -3511,7 +3523,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
 
     // Send chat message to production Supabase Edge Function
     async sendChat({ provider, model, systemPrompt, message, history, onDelta, onDone }) {
-        if (false) {
+        if (!this.accessToken) {
             throw new Error('Not authenticated');
         }
 
