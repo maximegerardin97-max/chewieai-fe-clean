@@ -1294,7 +1294,10 @@ class DesignRatingApp {
             });
             
             // RENDER THE CONVERSATION
+            console.log('[CONV] About to call showMainChatHistory');
+            console.log('[CONV] chatMemory before showMainChatHistory:', this.chatMemory);
             this.showMainChatHistory();
+            console.log('[CONV] showMainChatHistory completed');
             
             const historyContainer = document.getElementById('chatResultsContent');
 	            const historyHTML = messages.map(msg => {
@@ -1558,6 +1561,7 @@ class DesignRatingApp {
         // Show chat memory if available (loaded conversation)
         if (this.chatMemory && this.chatMemory.length > 0) {
             console.log('[CHAT] Rendering from chatMemory');
+            console.log('[CHAT] chatMemory data:', this.chatMemory);
             const renderItem = (msg) => {
                 const role = msg.role || '';
                 const isUser = role === 'user';
@@ -1594,6 +1598,8 @@ class DesignRatingApp {
             };
 
             const historyHTML = this.chatMemory.map(renderItem).join('');
+            console.log('[CHAT] Generated historyHTML:', historyHTML);
+            console.log('[CHAT] historyHTML length:', historyHTML.length);
             
             chatResultsContent.innerHTML = `
                 <div class="chat-history-container">
@@ -1602,6 +1608,7 @@ class DesignRatingApp {
                     </div>
                 </div>
             `;
+            console.log('[CHAT] Set innerHTML, chatResultsContent now has:', chatResultsContent.innerHTML.length, 'characters');
             return;
         }
         
