@@ -1608,7 +1608,18 @@ class DesignRatingApp {
                     </div>
                 </div>
             `;
+            
+            // Force visibility
+            chatResultsContent.style.display = 'block';
+            chatResultsContent.style.visibility = 'visible';
+            chatResultsContent.style.height = 'auto';
+            chatResultsContent.style.overflow = 'visible';
             console.log('[CHAT] Set innerHTML, chatResultsContent now has:', chatResultsContent.innerHTML.length, 'characters');
+            console.log('[CHAT] chatResultsContent display:', chatResultsContent.style.display);
+            console.log('[CHAT] chatResultsContent visibility:', chatResultsContent.style.visibility);
+            console.log('[CHAT] chatResultsContent height:', chatResultsContent.offsetHeight);
+            console.log('[CHAT] chatResultsContent width:', chatResultsContent.offsetWidth);
+            console.log('[CHAT] chatResultsContent parent:', chatResultsContent.parentElement);
             return;
         }
         
