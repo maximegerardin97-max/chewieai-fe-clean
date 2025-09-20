@@ -1569,31 +1569,20 @@ class DesignRatingApp {
                     const isUser = role === 'user';
                     let contentHtml = '';
                     if (Array.isArray(msg.contentParts)) {
-                        console.log('[CHAT] Processing contentParts:', msg.contentParts.length, 'parts');
                         for (const part of msg.contentParts) {
-                            console.log('[CHAT] Part:', part.kind, part.src ? part.src.substring(0, 100) + '...' : part.text?.substring(0, 100) + '...');
                             if (part.kind === 'text') {
                                 contentHtml += `<div>${this.formatContent(part.text)}</div>`;
                             } else if (part.kind === 'image') {
-                                console.log('[CHAT] Rendering image from contentParts:', part.src.substring(0, 100) + '...');
-                                console.log('[CHAT] Full image src length:', part.src.length);
-                                // Test with a simple image first
-                                contentHtml += `<div style="background: red; color: white; padding: 10px; margin: 10px 0;">TEST IMAGE SHOULD BE HERE</div>`;
-                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block; border: 2px solid red;">`;
+                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
                             }
                         }
                         if (!contentHtml) contentHtml = '<div></div>';
                     } else {
-                        console.log('[CHAT] Processing non-array content:', typeof msg.content, msg.content ? msg.content.substring(0, 100) + '...' : 'null');
                         const { imgSrc, strippedText } = this.extractImageFromContent(msg.content || '');
                         if (imgSrc) {
-                            console.log('[CHAT] Rendering image from extractImageFromContent:', imgSrc.substring(0, 100) + '...');
-                            console.log('[CHAT] Full image src length:', imgSrc.length);
-                            // Test with a simple image first
                             const safeText = this.escapeHtml(strippedText);
-                            contentHtml = `${safeText ? `<div>${safeText}</div>` : ''}<div style="background: red; color: white; padding: 10px; margin: 10px 0;">TEST IMAGE SHOULD BE HERE</div><img src="${imgSrc}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block; border: 2px solid red;">`;
+                            contentHtml = `${safeText ? `<div>${safeText}</div>` : ''}<img src="${imgSrc}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
                         } else {
-                            console.log('[CHAT] No image found, using formatContent');
                             contentHtml = this.formatContent(msg.content || '');
                         }
                     }
@@ -3992,36 +3981,27 @@ Product: E-commerce App | Industry: Retail | Platform: Web
     }
 
     // Extract image (data URL or http) from possibly multi-line content prefixed with "[image:" and return { imgSrc, strippedText }
-    extractImageFromContent(raw) {
-        const text = typeof raw === 'string' ? raw : this.normalizeContentAsText(raw);
-        if (!text) return { imgSrc: null, strippedText: '' };
-        console.log('[EXTRACT] Processing text:', text.substring(0, 200) + '...');
-        
-        // Grab everything after [image: (multi-line)
-        const afterMarker = text.match(/\[image:\s*([\s\S]*)$/i);
-        const searchArea = afterMarker ? afterMarker[1] : text;
-        console.log('[EXTRACT] Search area:', searchArea.substring(0, 200) + '...');
-        
-        // Find data URL or http image URL inside
-        const dataMatch = searchArea.match(/data:image\/(?:png|jpg|jpeg|gif|webp);base64,[A-Za-z0-9+/=\r\n]+/i);
-        const httpMatch = searchArea.match(/https?:\/\/\S+?\.(?:png|jpg|jpeg|gif|webp)(?:\?\S*)?/i);
-        const src = (dataMatch ? dataMatch[0] : (httpMatch ? httpMatch[0] : null));
-        
-        console.log('[EXTRACT] Data match:', !!dataMatch);
-        console.log('[EXTRACT] HTTP match:', !!httpMatch);
-        console.log('[EXTRACT] Found src:', src ? src.substring(0, 100) + '...' : 'null');
-        
-        if (!src) return { imgSrc: null, strippedText: text };
-        const cleanSrc = src.replace(/\s+/g, '');
-        // Remove the marker block and the src from text
-        let stripped = text.replace(/\[image:[\s\S]*$/i, '');
-        stripped = stripped.replace(src, '').trim();
-        
-        console.log('[EXTRACT] Clean src:', cleanSrc.substring(0, 100) + '...');
-        console.log('[EXTRACT] Stripped text:', stripped.substring(0, 100) + '...');
-        
-        return { imgSrc: cleanSrc, strippedText: stripped };
-    }
+        extractImageFromContent(raw) {
+            const text = typeof raw === 'string' ? raw : this.normalizeContentAsText(raw);
+            if (!text) return { imgSrc: null, strippedText: '' };
+            
+            // Grab everything after [image: (multi-line)
+            const afterMarker = text.match(/\[image:\s*([\s\S]*)$/i);
+            const searchArea = afterMarker ? afterMarker[1] : text;
+            
+            // Find data URL or http image URL inside
+            const dataMatch = searchArea.match(/data:image\/(?:png|jpg|jpeg|gif|webp);base64,[A-Za-z0-9+/=\r\n]+/i);
+            const httpMatch = searchArea.match(/https?:\/\/\S+?\.(?:png|jpg|jpeg|gif|webp)(?:\?\S*)?/i);
+            const src = (dataMatch ? dataMatch[0] : (httpMatch ? httpMatch[0] : null));
+            
+            if (!src) return { imgSrc: null, strippedText: text };
+            const cleanSrc = src.replace(/\s+/g, '');
+            // Remove the marker block and the src from text
+            let stripped = text.replace(/\[image:[\s\S]*$/i, '');
+            stripped = stripped.replace(src, '').trim();
+            
+            return { imgSrc: cleanSrc, strippedText: stripped };
+        }
 }
 
 // Initialize the app when the page loads
