@@ -1054,26 +1054,33 @@ class DesignRatingApp {
                     const raw = (msg.content !== undefined ? msg.content : msg.message);
                     let value = (raw && typeof raw === 'object' && raw.value !== undefined) ? raw.value : raw;
                     
+                    console.log('[CONV] Processing message:', { role, rawType: typeof raw, valueType: typeof value, valueStart: String(value).substring(0, 100) });
+                    
                     // Try to parse if it's a JSON string
-                    if (typeof value === 'string' && value.startsWith('[')) {
+                    if (typeof value === 'string' && (value.startsWith('[') || value.startsWith('{'))) {
                         try {
-                            value = JSON.parse(value);
+                            const parsed = JSON.parse(value);
+                            console.log('[CONV] Parsed JSON:', parsed);
+                            value = parsed;
                         } catch (e) {
-                            // If parsing fails, treat as regular text
+                            console.log('[CONV] JSON parse failed:', e.message);
                         }
                     }
                     
                     if (Array.isArray(value)) {
+                        console.log('[CONV] Processing array with', value.length, 'items');
                         const parts = [];
                         for (const p of value) {
                             if (p?.type === 'text' && typeof p.text === 'string') {
                                 parts.push({ kind: 'text', text: p.text });
                             } else if (p?.type === 'image_url' && p.image_url?.url) {
+                                console.log('[CONV] Found image_url:', p.image_url.url.substring(0, 50) + '...');
                                 parts.push({ kind: 'image', src: p.image_url.url });
                             } else if (typeof p === 'string') {
                                 parts.push({ kind: 'text', text: p });
                             }
                         }
+                        console.log('[CONV] Final parts:', parts);
                         this.chatMemory.push({ role, contentParts: parts });
                     } else {
                         const normalized = this.normalizeContentAsText(value);
