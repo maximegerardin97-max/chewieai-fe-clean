@@ -1111,6 +1111,8 @@ class DesignRatingApp {
             } catch {}
 
             // We render directly inside the conversation (right panel); left panel stays hidden
+            console.log('[CONV] About to call showMainChatHistory');
+            console.log('[CONV] chatMemory before showMainChatHistory:', this.chatMemory);
             this.showMainChatHistory();
             console.debug('[CONV] rendered main chat');
             
@@ -1495,11 +1497,17 @@ class DesignRatingApp {
     showMainChatHistory() {
         const chatResultsContent = document.getElementById('chatResultsContent');
         if (!chatResultsContent) {
+            console.log('[CHAT] No chatResultsContent element found');
             return;
         }
         
+        console.log('[CHAT] showMainChatHistory called');
+        console.log('[CHAT] chatMemory length:', this.chatMemory?.length);
+        console.log('[CHAT] mainChatHistory length:', this.mainChatHistory?.length);
+        
         // Show chat memory if available (loaded conversation)
         if (this.chatMemory && this.chatMemory.length > 0) {
+            console.log('[CHAT] Rendering from chatMemory');
             const renderItem = (msg) => {
                 const role = msg.role || '';
                 const isUser = role === 'user';
