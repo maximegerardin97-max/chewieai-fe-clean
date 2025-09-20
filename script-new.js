@@ -1622,13 +1622,25 @@ class DesignRatingApp {
                 </div>
             `;
             
-                // Force visibility
-                chatResultsContent.style.display = 'block';
-                chatResultsContent.style.visibility = 'visible';
-                chatResultsContent.style.height = 'auto';
-                chatResultsContent.style.minHeight = '400px';
-                chatResultsContent.style.overflow = 'visible';
-                chatResultsContent.style.width = '100%';
+                // Force visibility with aggressive styling
+                chatResultsContent.style.display = 'block !important';
+                chatResultsContent.style.visibility = 'visible !important';
+                chatResultsContent.style.height = 'auto !important';
+                chatResultsContent.style.minHeight = '400px !important';
+                chatResultsContent.style.maxHeight = 'none !important';
+                chatResultsContent.style.overflow = 'visible !important';
+                chatResultsContent.style.width = '100% !important';
+                chatResultsContent.style.position = 'relative !important';
+                chatResultsContent.style.zIndex = '999 !important';
+                
+                // Also force the parent container
+                const chatResultsContainer = document.getElementById('chatResultsContainer');
+                if (chatResultsContainer) {
+                    chatResultsContainer.style.display = 'block !important';
+                    chatResultsContainer.style.height = 'auto !important';
+                    chatResultsContainer.style.minHeight = '400px !important';
+                    chatResultsContainer.style.overflow = 'visible !important';
+                }
             console.log('[CHAT] Set innerHTML, chatResultsContent now has:', chatResultsContent.innerHTML.length, 'characters');
             console.log('[CHAT] chatResultsContent display:', chatResultsContent.style.display);
             console.log('[CHAT] chatResultsContent visibility:', chatResultsContent.style.visibility);
