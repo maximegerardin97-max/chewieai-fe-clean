@@ -3667,9 +3667,13 @@ Product: E-commerce App | Industry: Retail | Platform: Web
             }
 
             const data = await resp.json();
-            this.currentConversationId = data.conversation.id;
+            console.log('[CONVERSATION] Response data:', data);
+            
+            // Handle both response formats: { conversation: {...} } or { id: ... }
+            const conversation = data.conversation || data;
+            this.currentConversationId = conversation.id;
             console.log('[CONVERSATION] Created new conversation:', this.currentConversationId);
-            return data.conversation;
+            return conversation;
         } catch (error) {
             console.error('[CONVERSATION] Error creating conversation:', error);
             throw error;
