@@ -1049,28 +1049,37 @@ class DesignRatingApp {
             console.log('[CONV] cleaned count', { count: cleaned.length });
 
             // Normalize and push
-            cleaned.forEach(msg => {
-                const role = (msg.role || '').toLowerCase();
-                const raw = (msg.content !== undefined ? msg.content : msg.message);
-                const value = (raw && typeof raw === 'object' && raw.value !== undefined) ? raw.value : raw;
-                if (Array.isArray(value)) {
-                    const parts = [];
-                    for (const p of value) {
-                        if (p?.type === 'text' && typeof p.text === 'string') {
-                            parts.push({ kind: 'text', text: p.text });
-                        } else if (p?.type === 'image_url' && p.image_url?.url) {
-                            console.log('[CONV] Processing image_url:', p.image_url.url.substring(0, 100) + '...');
-                            parts.push({ kind: 'image', src: p.image_url.url });
-                        } else if (typeof p === 'string') {
-                            parts.push({ kind: 'text', text: p });
+                cleaned.forEach(msg => {
+                    const role = (msg.role || '').toLowerCase();
+                    const raw = (msg.content !== undefined ? msg.content : msg.message);
+                    let value = (raw && typeof raw === 'object' && raw.value !== undefined) ? raw.value : raw;
+                    
+                    // Try to parse if it's a JSON string
+                    if (typeof value === 'string' && value.startsWith('[')) {
+                        try {
+                            value = JSON.parse(value);
+                        } catch (e) {
+                            // If parsing fails, treat as regular text
                         }
                     }
-                    this.chatMemory.push({ role, contentParts: parts });
-                } else {
-                    const normalized = this.normalizeContentAsText(value);
-                    this.chatMemory.push({ role, content: normalized });
-                }
-            });
+                    
+                    if (Array.isArray(value)) {
+                        const parts = [];
+                        for (const p of value) {
+                            if (p?.type === 'text' && typeof p.text === 'string') {
+                                parts.push({ kind: 'text', text: p.text });
+                            } else if (p?.type === 'image_url' && p.image_url?.url) {
+                                parts.push({ kind: 'image', src: p.image_url.url });
+                            } else if (typeof p === 'string') {
+                                parts.push({ kind: 'text', text: p });
+                            }
+                        }
+                        this.chatMemory.push({ role, contentParts: parts });
+                    } else {
+                        const normalized = this.normalizeContentAsText(value);
+                        this.chatMemory.push({ role, content: normalized });
+                    }
+                });
 
             // Also populate mainChatHistory for compatibility
             this.mainChatHistory = [];
