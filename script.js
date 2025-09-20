@@ -30,9 +30,9 @@ class DesignRatingApp {
         this.mainChatHistory = []; // Centralized main chat history
         this.chatMemory = []; // last 10 turns (20 messages)
 
-        // Shared settings from LLM Proxy
-        this.currentProvider = 'anthropic'; // Default to Anthropic
-        this.currentModel = 'claude-3-5-sonnet-20241022';
+        // Shared settings from LLM Proxy - loaded from app_settings
+        this.currentProvider = null; // Will be loaded from app_settings
+        this.currentModel = null; // Will be loaded from app_settings
         this.currentSystemPrompt = null;
         
         // Loading messages for creative feedback
@@ -828,20 +828,7 @@ class DesignRatingApp {
             }
         });
 
-        // Provider selection
-        const providerSelect = document.getElementById('providerSelect');
-        if (providerSelect) {
-            providerSelect.addEventListener('change', (e) => {
-                this.currentProvider = e.target.value;
-                // Update model based on provider
-                if (this.currentProvider === 'anthropic') {
-                    this.currentModel = 'claude-3-5-sonnet-20241022';
-                } else if (this.currentProvider === 'google') {
-                    this.currentModel = 'gemini-2.5-pro';
-                }
-                console.log('Provider switched to:', this.currentProvider, 'Model:', this.currentModel);
-            });
-        }
+        // Provider selection removed - now loaded from app_settings
         
         // Toggle chat collapse/expand
         chatToggleBtn.addEventListener('click', () => {
@@ -3567,8 +3554,6 @@ Product: E-commerce App | Industry: Retail | Platform: Web
                 body: JSON.stringify({
                     conversation_id: this.currentConversationId,
                     message: message,
-                    provider: provider || 'anthropic',
-                    model: model || 'claude-3-5-sonnet-20241022',
                     temperature: 0.7,
                     maxTokens: 4000
                 })
