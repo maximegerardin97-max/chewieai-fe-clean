@@ -1059,6 +1059,7 @@ class DesignRatingApp {
                         if (p?.type === 'text' && typeof p.text === 'string') {
                             parts.push({ kind: 'text', text: p.text });
                         } else if (p?.type === 'image_url' && p.image_url?.url) {
+                            console.log('[CONV] Processing image_url:', p.image_url.url.substring(0, 100) + '...');
                             parts.push({ kind: 'image', src: p.image_url.url });
                         } else if (typeof p === 'string') {
                             parts.push({ kind: 'text', text: p });
@@ -1262,6 +1263,7 @@ class DesignRatingApp {
                         if (p?.type === 'text' && typeof p.text === 'string') {
                             parts.push({ kind: 'text', text: p.text });
                         } else if (p?.type === 'image_url' && p.image_url?.url) {
+                            console.log('[CONV] Processing image_url:', p.image_url.url.substring(0, 100) + '...');
                             parts.push({ kind: 'image', src: p.image_url.url });
                         } else if (typeof p === 'string') {
                             parts.push({ kind: 'text', text: p });
@@ -1562,28 +1564,32 @@ class DesignRatingApp {
         if (this.chatMemory && this.chatMemory.length > 0) {
             console.log('[CHAT] Rendering from chatMemory');
             console.log('[CHAT] chatMemory data:', this.chatMemory);
-            const renderItem = (msg) => {
-                const role = msg.role || '';
-                const isUser = role === 'user';
-                let contentHtml = '';
-                if (Array.isArray(msg.contentParts)) {
-                    for (const part of msg.contentParts) {
-                        if (part.kind === 'text') {
-                            contentHtml += `<div>${this.formatContent(part.text)}</div>`;
-                        } else if (part.kind === 'image') {
-                            contentHtml += `<img src="${part.src}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
+                const renderItem = (msg) => {
+                    const role = msg.role || '';
+                    const isUser = role === 'user';
+                    let contentHtml = '';
+                    if (Array.isArray(msg.contentParts)) {
+                        for (const part of msg.contentParts) {
+                            if (part.kind === 'text') {
+                                contentHtml += `<div>${this.formatContent(part.text)}</div>`;
+                            } else if (part.kind === 'image') {
+                                console.log('[CHAT] Rendering image from contentParts:', part.src.substring(0, 100) + '...');
+                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
+                            }
+                        }
+                        if (!contentHtml) contentHtml = '<div></div>';
+                    } else {
+                        console.log('[CHAT] Processing non-array content:', typeof msg.content, msg.content ? msg.content.substring(0, 100) + '...' : 'null');
+                        const { imgSrc, strippedText } = this.extractImageFromContent(msg.content || '');
+                        if (imgSrc) {
+                            console.log('[CHAT] Rendering image from extractImageFromContent:', imgSrc.substring(0, 100) + '...');
+                            const safeText = this.escapeHtml(strippedText);
+                            contentHtml = `${safeText ? `<div>${safeText}</div>` : ''}<img src="${imgSrc}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
+                        } else {
+                            console.log('[CHAT] No image found, using formatContent');
+                            contentHtml = this.formatContent(msg.content || '');
                         }
                     }
-                    if (!contentHtml) contentHtml = '<div></div>';
-                } else {
-                    const { imgSrc, strippedText } = this.extractImageFromContent(msg.content || '');
-                    if (imgSrc) {
-                        const safeText = this.escapeHtml(strippedText);
-                        contentHtml = `${safeText ? `<div>${safeText}</div>` : ''}<img src="${imgSrc}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
-                    } else {
-                        contentHtml = this.formatContent(msg.content || '');
-                    }
-                }
                 const sender = isUser ? 'You' : 'AI';
                 const messageClass = isUser ? 'user-message' : 'agent-message';
                 return `
@@ -3968,18 +3974,31 @@ Product: E-commerce App | Industry: Retail | Platform: Web
     extractImageFromContent(raw) {
         const text = typeof raw === 'string' ? raw : this.normalizeContentAsText(raw);
         if (!text) return { imgSrc: null, strippedText: '' };
+        console.log('[EXTRACT] Processing text:', text.substring(0, 200) + '...');
+        
         // Grab everything after [image: (multi-line)
         const afterMarker = text.match(/\[image:\s*([\s\S]*)$/i);
         const searchArea = afterMarker ? afterMarker[1] : text;
+        console.log('[EXTRACT] Search area:', searchArea.substring(0, 200) + '...');
+        
         // Find data URL or http image URL inside
         const dataMatch = searchArea.match(/data:image\/(?:png|jpg|jpeg|gif|webp);base64,[A-Za-z0-9+/=\r\n]+/i);
         const httpMatch = searchArea.match(/https?:\/\/\S+?\.(?:png|jpg|jpeg|gif|webp)(?:\?\S*)?/i);
         const src = (dataMatch ? dataMatch[0] : (httpMatch ? httpMatch[0] : null));
+        
+        console.log('[EXTRACT] Data match:', !!dataMatch);
+        console.log('[EXTRACT] HTTP match:', !!httpMatch);
+        console.log('[EXTRACT] Found src:', src ? src.substring(0, 100) + '...' : 'null');
+        
         if (!src) return { imgSrc: null, strippedText: text };
         const cleanSrc = src.replace(/\s+/g, '');
         // Remove the marker block and the src from text
         let stripped = text.replace(/\[image:[\s\S]*$/i, '');
         stripped = stripped.replace(src, '').trim();
+        
+        console.log('[EXTRACT] Clean src:', cleanSrc.substring(0, 100) + '...');
+        console.log('[EXTRACT] Stripped text:', stripped.substring(0, 100) + '...');
+        
         return { imgSrc: cleanSrc, strippedText: stripped };
     }
 }
