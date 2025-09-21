@@ -3799,23 +3799,34 @@ Product: E-commerce App | Industry: Retail | Platform: Web
             throw new Error('Not authenticated');
         }
 
-        try {
-            const resp = await fetch(`${this.backendUrl}/messages?conversation_id=${conversationId}`, {
-                method: 'GET',
-                headers: this.getAuthHeaders()
-            });
+        // Get user from session to ensure proper filtering
+        const { data: { user } } = await this.supabaseClient.auth.getUser();
+        if (!user) {
+            throw new Error('User not authenticated');
+        }
 
-            if (!resp.ok) {
-                throw new Error(`Failed to load messages: ${resp.status}`);
-            }
+        // Query messages directly from Supabase
+        const { data: messages, error } = await this.supabaseClient
+            .from('messages')
+            .select('id, role, content, is_final, chunk_index, created_at')
+            .eq('conversation_id', conversationId)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: true });
 
-            const data = await resp.json();
-            console.log('[MESSAGES] Loaded messages for conversation:', conversationId, data);
-            return data;
-        } catch (error) {
-            console.error('[MESSAGES] Error loading messages:', error);
+        console.log('[MESSAGES] Supabase response:', { messages, error, type: typeof messages, isArray: Array.isArray(messages) });
+
+        if (error) {
+            console.error('[MESSAGES] Supabase error:', error);
             throw error;
         }
+
+        if (!messages || !Array.isArray(messages)) {
+            console.warn('[MESSAGES] No messages or not an array:', messages);
+            return [];
+        }
+
+        console.log('[MESSAGES] Loaded messages for conversation:', conversationId, messages);
+        return messages;
     }
 
     // Refresh conversations in the history drawer
