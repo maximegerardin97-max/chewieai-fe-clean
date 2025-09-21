@@ -1644,6 +1644,12 @@ class DesignRatingApp {
             
             // Debug: Check if images are in the DOM
             setTimeout(() => {
+                console.log('[DEBUG] Container after timeout:', {
+                    height: chatResultsContent.offsetHeight,
+                    width: chatResultsContent.offsetWidth,
+                    innerHTML: chatResultsContent.innerHTML.substring(0, 500) + '...'
+                });
+                
                 const images = chatResultsContent.querySelectorAll('img');
                 console.log('[DEBUG] Found', images.length, 'images in DOM');
                 images.forEach((img, i) => {
@@ -1652,10 +1658,23 @@ class DesignRatingApp {
                         width: img.offsetWidth,
                         height: img.offsetHeight,
                         display: img.style.display,
-                        visible: img.offsetWidth > 0 && img.offsetHeight > 0
+                        visible: img.offsetWidth > 0 && img.offsetHeight > 0,
+                        parentElement: img.parentElement?.tagName,
+                        parentHeight: img.parentElement?.offsetHeight
                     });
                 });
-            }, 500);
+                
+                // Force show the container with even more aggressive styling
+                if (chatResultsContent.offsetHeight === 0) {
+                    console.log('[DEBUG] Container still 0 height, forcing with !important');
+                    chatResultsContent.style.setProperty('height', '600px', 'important');
+                    chatResultsContent.style.setProperty('min-height', '600px', 'important');
+                    chatResultsContent.style.setProperty('display', 'block', 'important');
+                    chatResultsContent.style.setProperty('visibility', 'visible', 'important');
+                    chatResultsContent.style.setProperty('position', 'relative', 'important');
+                    chatResultsContent.style.setProperty('z-index', '999', 'important');
+                }
+            }, 1000);
             
             console.log('[CHAT] Container dimensions after fix:', {
                 height: chatResultsContent.offsetHeight,
