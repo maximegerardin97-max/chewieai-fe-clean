@@ -1000,8 +1000,9 @@ class DesignRatingApp {
         listEl.innerHTML = '<div style="padding:12px;color:#94a3b8;">Loading…</div>';
         try {
             const conversations = await this.loadConversations();
-            console.debug('[HISTORY] conversations', { count: conversations?.length });
+            console.debug('[HISTORY] conversations', { count: conversations?.length, conversations: conversations });
             if (!Array.isArray(conversations) || conversations.length === 0) {
+                console.debug('[HISTORY] No conversations found');
                 listEl.innerHTML = '<div style="padding:12px;color:#94a3b8;">No conversations yet</div>';
                 return;
             }
@@ -3880,10 +3881,16 @@ Product: E-commerce App | Industry: Retail | Platform: Web
     // Render the history drawer with conversations
     renderHistoryDrawer(conversations = null) {
         const historyList = document.getElementById('historyDrawerList');
-        if (!historyList) return;
+        if (!historyList) {
+            console.error('[HISTORY] historyDrawerList element not found');
+            return;
+        }
+
+        console.debug('[HISTORY] renderHistoryDrawer called with:', { conversations, length: conversations?.length });
 
         if (conversations) {
             if (conversations.length === 0) {
+                console.debug('[HISTORY] No conversations provided');
                 historyList.innerHTML = '<div style="padding:12px;color:#666;">No conversations yet</div>';
                 return;
             }
