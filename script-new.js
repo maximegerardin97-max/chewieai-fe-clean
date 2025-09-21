@@ -1650,6 +1650,29 @@ class DesignRatingApp {
             chatResultsContent.style.height = '100%';
             chatResultsContent.style.overflow = 'visible';
             chatResultsContent.style.padding = '0';
+            chatResultsContent.style.display = 'block';
+            chatResultsContent.style.visibility = 'visible';
+            
+            // Force show the container
+            setTimeout(() => {
+                console.log('[DEBUG] Container after render:', {
+                    height: chatResultsContainer.offsetHeight,
+                    width: chatResultsContainer.offsetWidth,
+                    innerHTML: chatResultsContent.innerHTML.substring(0, 200) + '...'
+                });
+                
+                // Check if images are in DOM
+                const images = chatResultsContent.querySelectorAll('img');
+                console.log('[DEBUG] Found', images.length, 'images in DOM');
+                images.forEach((img, i) => {
+                    console.log(`[DEBUG] Image ${i}:`, {
+                        src: img.src.substring(0, 50) + '...',
+                        style: img.style.cssText,
+                        offsetHeight: img.offsetHeight,
+                        offsetWidth: img.offsetWidth
+                    });
+                });
+            }, 100);
             // Force a reflow and check dimensions after a short delay
             setTimeout(() => {
                 // If still collapsed, force it with even more aggressive styling
