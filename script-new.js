@@ -377,12 +377,26 @@ class DesignRatingApp {
 
     async loadMessages(conversationId) {
         if (!this.accessToken) { this.showAuthModal(); return []; }
-        const resp = await fetch(`${this.backendUrl}/messages?conversation_id=${conversationId}`, {
-            headers: this.getAuthHeaders()
-        });
-        if (!resp.ok) throw new Error(`Load messages failed: ${resp.status}`);
-        const data = await resp.json();
-        return data.messages || [];
+        
+        // Get user from session to ensure proper filtering
+        const { data: { user } } = await this.supabaseClient.auth.getUser();
+        if (!user) {
+            throw new Error('User not authenticated');
+        }
+
+        // Query messages directly from Supabase
+        const { data: messages } = await this.supabaseClient
+            .from('messages')
+            .select('id, role, content, is_final, chunk_index, created_at')
+            .eq('conversation_id', conversationId)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: true });
+
+        if (!messages) {
+            return [];
+        }
+
+        return messages;
     }
 
     async loadKnowledgeBase() {

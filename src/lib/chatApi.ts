@@ -1,3 +1,5 @@
+import { supabase } from './supabaseClient';
+
 export type Conversation = {
   id: string;
   title?: string | null;
@@ -70,9 +72,25 @@ export async function deleteConversation(accessToken: string, id: string): Promi
 }
 
 export async function listMessages(accessToken: string, conversationId: string): Promise<Message[]> {
-  const r = await doFetch(`/messages?conversation_id=${encodeURIComponent(conversationId)}`, accessToken, { method: 'GET' });
-  const data = await r.json();
-  return data.messages || [];
+  // Get user from session to ensure proper filtering
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Query messages directly from Supabase
+  const { data: messages } = await supabase
+    .from('messages')
+    .select('id, role, content, is_final, chunk_index, created_at')
+    .eq('conversation_id', conversationId)
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true });
+
+  if (!messages) {
+    return [];
+  }
+
+  return messages;
 }
 
 export async function sendMessage(accessToken: string, params: { conversationId: string; message: string; provider?: string; model?: string; }): Promise<Message> {
@@ -127,6 +145,7 @@ export async function streamMessage(
   }
   if (onDone) onDone();
 }
+
 
 
 

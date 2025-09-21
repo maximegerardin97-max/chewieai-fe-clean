@@ -1,3 +1,5 @@
+import { supabase } from './supabaseClient';
+
 const BASE_URL = (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_BACKEND_URL)
     ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api`
     : `${window.location.origin.replace('5173', '3000')}/api`;
@@ -47,9 +49,25 @@ export async function deleteConversation(accessToken, id) {
     return r.json();
 }
 export async function listMessages(accessToken, conversationId) {
-    const r = await doFetch(`/messages?conversation_id=${encodeURIComponent(conversationId)}`, accessToken, { method: 'GET' });
-    const data = await r.json();
-    return data.messages || [];
+    // Get user from session to ensure proper filtering
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        throw new Error('User not authenticated');
+    }
+
+    // Query messages directly from Supabase
+    const { data: messages } = await supabase
+        .from('messages')
+        .select('id, role, content, is_final, chunk_index, created_at')
+        .eq('conversation_id', conversationId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
+
+    if (!messages) {
+        return [];
+    }
+
+    return messages;
 }
 export async function sendMessage(accessToken, params) {
     const r = await doFetch(`/messages`, accessToken, {
