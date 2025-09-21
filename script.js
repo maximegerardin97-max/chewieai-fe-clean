@@ -385,14 +385,22 @@ class DesignRatingApp {
         }
 
         // Query messages directly from Supabase
-        const { data: messages } = await this.supabaseClient
+        const { data: messages, error } = await this.supabaseClient
             .from('messages')
             .select('id, role, content, is_final, chunk_index, created_at')
             .eq('conversation_id', conversationId)
             .eq('user_id', user.id)
             .order('created_at', { ascending: true });
 
-        if (!messages) {
+        console.log('[MESSAGES] Supabase response:', { messages, error, type: typeof messages, isArray: Array.isArray(messages) });
+
+        if (error) {
+            console.error('[MESSAGES] Supabase error:', error);
+            return [];
+        }
+
+        if (!messages || !Array.isArray(messages)) {
+            console.warn('[MESSAGES] No messages or not an array:', messages);
             return [];
         }
 
