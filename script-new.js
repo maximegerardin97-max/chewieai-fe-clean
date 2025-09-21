@@ -1578,13 +1578,16 @@ class DesignRatingApp {
                     const isUser = role === 'user';
                     let contentHtml = '';
                     
+                    console.log('[RENDER] Processing message:', { role, content: msg.content, contentParts: msg.contentParts });
+                    
                     // Handle array content (new format)
                     if (Array.isArray(msg.content)) {
                         for (const part of msg.content) {
                             if (part.type === 'text') {
                                 contentHtml += `<div>${this.formatContent(part.text)}</div>`;
                             } else if (part.type === 'image_url' && part.image_url?.url?.startsWith('data:image/')) {
-                                contentHtml += `<img src="${part.image_url.url}" alt="image" style="max-width: 100%; height: auto; margin: 8px 0; border-radius: 8px; display:block;">`;
+                                console.log('[IMAGE] Rendering base64 image:', part.image_url.url.substring(0, 50) + '...');
+                                contentHtml += `<img src="${part.image_url.url}" alt="image" style="max-width: 100%; height: auto; margin: 8px 0; border-radius: 8px; display:block; border: 1px solid #ddd;">`;
                             }
                         }
                         if (!contentHtml) contentHtml = '<div></div>';
@@ -1627,37 +1630,24 @@ class DesignRatingApp {
             console.log('[CHAT] Generated historyHTML:', historyHTML);
             console.log('[CHAT] historyHTML length:', historyHTML.length);
             
-            chatResultsContent.innerHTML = `
-                <div class="chat-history-container">
-                    <div class="chat-history-content">
-                        ${historyHTML}
-                    </div>
-                </div>
-            `;
+            chatResultsContent.innerHTML = historyHTML;
             
-            // Force visibility with aggressive styling
-            chatResultsContent.style.setProperty('display', 'block', 'important');
-            chatResultsContent.style.setProperty('visibility', 'visible', 'important');
-            chatResultsContent.style.setProperty('height', 'auto', 'important');
-            chatResultsContent.style.setProperty('min-height', '400px', 'important');
-            chatResultsContent.style.setProperty('max-height', 'none', 'important');
-            chatResultsContent.style.setProperty('overflow', 'visible', 'important');
-            chatResultsContent.style.setProperty('width', '100%', 'important');
-            chatResultsContent.style.setProperty('position', 'relative', 'important');
-            chatResultsContent.style.setProperty('z-index', '999', 'important');
-            chatResultsContent.style.setProperty('padding', '20px', 'important');
-            chatResultsContent.style.setProperty('box-sizing', 'border-box', 'important');
-
-            // Also force the parent container
+            // Set proper container styling for scrolling
             const chatResultsContainer = document.getElementById('chatResultsContainer');
             if (chatResultsContainer) {
-                chatResultsContainer.style.setProperty('display', 'block', 'important');
-                chatResultsContainer.style.setProperty('height', 'auto', 'important');
-                chatResultsContainer.style.setProperty('min-height', '400px', 'important');
-                chatResultsContainer.style.setProperty('overflow', 'visible', 'important');
-                chatResultsContainer.style.setProperty('padding', '20px', 'important');
-                chatResultsContainer.style.setProperty('box-sizing', 'border-box', 'important');
+                chatResultsContainer.style.height = '500px';
+                chatResultsContainer.style.minHeight = '500px';
+                chatResultsContainer.style.maxHeight = '500px';
+                chatResultsContainer.style.overflow = 'auto';
+                chatResultsContainer.style.width = '100%';
+                chatResultsContainer.style.padding = '16px';
+                chatResultsContainer.style.boxSizing = 'border-box';
             }
+            
+            // Set content styling
+            chatResultsContent.style.height = '100%';
+            chatResultsContent.style.overflow = 'visible';
+            chatResultsContent.style.padding = '0';
             // Force a reflow and check dimensions after a short delay
             setTimeout(() => {
                 // If still collapsed, force it with even more aggressive styling
