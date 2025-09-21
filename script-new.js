@@ -1600,7 +1600,7 @@ class DesignRatingApp {
                                 contentHtml += `<div>${this.formatContent(part.text)}</div>`;
                             } else if (part.kind === 'image' && part.src?.startsWith('data:image/')) {
                                 console.log('[IMAGE] Rendering contentParts base64 image:', part.src.substring(0, 50) + '...');
-                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 100%; height: auto; margin: 8px 0; border-radius: 8px; display:block; border: 2px solid #007bff;">`;
+                                contentHtml += `<div style="margin: 10px 0; padding: 10px; border: 2px solid #007bff; background: #f0f8ff;"><img src="${part.src}" alt="image" style="max-width: 100%; height: auto; display: block;"></div>`;
                             }
                         }
                         if (!contentHtml) contentHtml = '<div></div>';
