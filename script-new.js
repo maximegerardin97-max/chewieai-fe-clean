@@ -1620,9 +1620,27 @@ class DesignRatingApp {
                 </div>
             `;
             
-            // Simple fix - just ensure the container is visible
+            // Force container to be visible and have proper dimensions
             chatResultsContent.style.display = 'block';
             chatResultsContent.style.visibility = 'visible';
+            chatResultsContent.style.height = 'auto';
+            chatResultsContent.style.minHeight = '400px';
+            chatResultsContent.style.overflow = 'visible';
+            
+            // Also check the parent container
+            const chatResultsContainer = document.getElementById('chatResultsContainer');
+            if (chatResultsContainer) {
+                chatResultsContainer.style.height = 'auto';
+                chatResultsContainer.style.minHeight = '400px';
+                chatResultsContainer.style.overflow = 'visible';
+            }
+            
+            console.log('[CHAT] Container dimensions after fix:', {
+                height: chatResultsContent.offsetHeight,
+                width: chatResultsContent.offsetWidth,
+                parentHeight: chatResultsContainer?.offsetHeight,
+                parentWidth: chatResultsContainer?.offsetWidth
+            });
             console.log('[CHAT] chatResultsContent parent:', chatResultsContent.parentElement);
             
             // FORCE SHOW THE CHAT UI
