@@ -1625,9 +1625,22 @@ class DesignRatingApp {
                 </div>
             `;
             
-            // Ensure container is visible
+            // Force container to have proper dimensions
             chatResultsContent.style.display = 'block';
             chatResultsContent.style.visibility = 'visible';
+            chatResultsContent.style.height = '500px';
+            chatResultsContent.style.minHeight = '500px';
+            chatResultsContent.style.width = '100%';
+            chatResultsContent.style.overflow = 'auto';
+            
+            // Also force the parent container
+            const chatResultsContainer = document.getElementById('chatResultsContainer');
+            if (chatResultsContainer) {
+                chatResultsContainer.style.height = '500px';
+                chatResultsContainer.style.minHeight = '500px';
+                chatResultsContainer.style.width = '100%';
+                chatResultsContainer.style.overflow = 'auto';
+            }
             
             // Debug: Check if images are in the DOM
             setTimeout(() => {
