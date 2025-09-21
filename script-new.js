@@ -1616,6 +1616,11 @@ class DesignRatingApp {
                 <div class="chat-history-container">
                     <div class="chat-history-content">
                         ${historyHTML}
+                        <!-- TEST IMAGE -->
+                        <div style="border: 2px solid red; padding: 10px; margin: 10px;">
+                            <p>TEST IMAGE:</p>
+                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iYmx1ZSIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VEVTVDwvdGV4dD48L3N2Zz4=" alt="test" style="width: 100px; height: 100px; border: 2px solid green;">
+                        </div>
                     </div>
                 </div>
             `;
@@ -1623,6 +1628,21 @@ class DesignRatingApp {
             // Ensure container is visible
             chatResultsContent.style.display = 'block';
             chatResultsContent.style.visibility = 'visible';
+            
+            // Debug: Check if images are in the DOM
+            setTimeout(() => {
+                const images = chatResultsContent.querySelectorAll('img');
+                console.log('[DEBUG] Found', images.length, 'images in DOM');
+                images.forEach((img, i) => {
+                    console.log(`[DEBUG] Image ${i}:`, {
+                        src: img.src.substring(0, 50) + '...',
+                        width: img.offsetWidth,
+                        height: img.offsetHeight,
+                        display: img.style.display,
+                        visible: img.offsetWidth > 0 && img.offsetHeight > 0
+                    });
+                });
+            }, 500);
             
             console.log('[CHAT] Container dimensions after fix:', {
                 height: chatResultsContent.offsetHeight,
