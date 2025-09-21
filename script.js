@@ -975,7 +975,7 @@ class DesignRatingApp {
             }
             list.innerHTML = conversations.map(conv => `
                 <div class="history-conv-item" data-id="${conv.id}" style="padding:12px 14px;border-bottom:1px solid #111827;cursor:pointer;${conv.id===this.currentConversationId?'background:#1f2937;border-left:3px solid #60a5fa;':''}">
-                    <div style="font-size:14px;color:#e5e7eb;">${this.escapeHtml(conv.title || this.generateTitleFromMessage('') || 'Untitled conversation')}</div>
+                    <div style="font-size:14px;color:#e5e7eb;">${this.escapeHtml(conv.title || 'Untitled conversation')}</div>
                     <div style="font-size:12px;color:#94a3b8;margin-top:2px;">${new Date(conv.updated_at||conv.created_at).toLocaleString()}</div>
                 </div>
             `).join('');
@@ -3757,7 +3757,29 @@ Product: E-commerce App | Industry: Retail | Platform: Web
 
             const data = await resp.json();
             console.log('[CONVERSATIONS] Loaded conversations:', data);
-            return data.conversations || [];
+            const conversations = data.conversations || [];
+            
+            // Generate titles for conversations that don't have them
+            for (const conv of conversations) {
+                if (!conv.title || conv.title === 'Untitled conversation') {
+                    try {
+                        // Load first user message to generate title
+                        const messages = await this.loadMessages(conv.id);
+                        const firstUserMessage = messages.find(m => m.role === 'user');
+                        if (firstUserMessage) {
+                            const raw = firstUserMessage.content !== undefined ? firstUserMessage.content : firstUserMessage.message;
+                            const value = (raw && typeof raw === 'object' && raw.value !== undefined) ? raw.value : raw;
+                            const textContent = this.normalizeContentAsText(value);
+                            conv.title = this.generateTitleFromMessage(textContent) || 'Untitled conversation';
+                        }
+                    } catch (error) {
+                        console.warn(`[CONVERSATIONS] Failed to generate title for conversation ${conv.id}:`, error);
+                        conv.title = conv.title || 'Untitled conversation';
+                    }
+                }
+            }
+            
+            return conversations;
         } catch (error) {
             console.error('[CONVERSATIONS] Error loading conversations:', error);
             throw error;
