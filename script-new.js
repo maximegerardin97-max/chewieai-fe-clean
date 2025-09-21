@@ -3886,14 +3886,14 @@ Product: E-commerce App | Industry: Retail | Platform: Web
             return;
         }
 
-        console.debug('[HISTORY] renderHistoryDrawer called with:', { conversations, length: conversations?.length });
+        console.debug('[HISTORY] renderHistoryDrawer called with:', { 
+            conversations, 
+            length: conversations?.length, 
+            isArray: Array.isArray(conversations),
+            type: typeof conversations
+        });
 
-        if (conversations) {
-            if (conversations.length === 0) {
-                console.debug('[HISTORY] No conversations provided');
-                historyList.innerHTML = '<div style="padding:12px;color:#666;">No conversations yet</div>';
-                return;
-            }
+        if (conversations && Array.isArray(conversations) && conversations.length > 0) {
 
             const conversationsHTML = conversations.map(conv => `
                 <div class="history-item" data-conversation-id="${conv.id}" style="padding: 8px; border-bottom: 1px solid #eee; cursor: pointer;">
