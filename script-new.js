@@ -1582,7 +1582,7 @@ class DesignRatingApp {
                             if (part.kind === 'text') {
                                 contentHtml += `<div>${this.formatContent(part.text)}</div>`;
                             } else if (part.kind === 'image') {
-                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block; border: 3px solid red; background: yellow;" onload="console.log('IMAGE LOADED!')" onerror="console.log('IMAGE ERROR!')">`;
+                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
                             }
                         }
                         if (!contentHtml) contentHtml = '<div></div>';
@@ -1590,7 +1590,7 @@ class DesignRatingApp {
                         const { imgSrc, strippedText } = this.extractImageFromContent(msg.content || '');
                         if (imgSrc) {
                             const safeText = this.escapeHtml(strippedText);
-                            contentHtml = `${safeText ? `<div>${safeText}</div>` : ''}<img src="${imgSrc}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block; border: 3px solid red; background: yellow;" onload="console.log('IMAGE LOADED!')" onerror="console.log('IMAGE ERROR!')">`;
+                            contentHtml = `${safeText ? `<div>${safeText}</div>` : ''}<img src="${imgSrc}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
                         } else {
                             contentHtml = this.formatContent(msg.content || '');
                         }
@@ -1620,20 +1620,9 @@ class DesignRatingApp {
                 </div>
             `;
             
-            // Force container to be visible and have proper dimensions
+            // Ensure container is visible
             chatResultsContent.style.display = 'block';
             chatResultsContent.style.visibility = 'visible';
-            chatResultsContent.style.height = 'auto';
-            chatResultsContent.style.minHeight = '400px';
-            chatResultsContent.style.overflow = 'visible';
-            
-            // Also check the parent container
-            const chatResultsContainer = document.getElementById('chatResultsContainer');
-            if (chatResultsContainer) {
-                chatResultsContainer.style.height = 'auto';
-                chatResultsContainer.style.minHeight = '400px';
-                chatResultsContainer.style.overflow = 'visible';
-            }
             
             console.log('[CHAT] Container dimensions after fix:', {
                 height: chatResultsContent.offsetHeight,
