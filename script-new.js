@@ -1594,11 +1594,13 @@ class DesignRatingApp {
                     }
                     // Handle contentParts (old format)
                     else if (Array.isArray(msg.contentParts)) {
+                        console.log('[RENDER] Processing contentParts:', msg.contentParts);
                         for (const part of msg.contentParts) {
                             if (part.kind === 'text') {
                                 contentHtml += `<div>${this.formatContent(part.text)}</div>`;
-                            } else if (part.kind === 'image') {
-                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 100%; height: auto; margin: 8px 0; border-radius: 8px; display:block;">`;
+                            } else if (part.kind === 'image' && part.src?.startsWith('data:image/')) {
+                                console.log('[IMAGE] Rendering contentParts base64 image:', part.src.substring(0, 50) + '...');
+                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 100%; height: auto; margin: 8px 0; border-radius: 8px; display:block; border: 2px solid #007bff;">`;
                             }
                         }
                         if (!contentHtml) contentHtml = '<div></div>';
