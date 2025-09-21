@@ -1582,7 +1582,7 @@ class DesignRatingApp {
                             if (part.kind === 'text') {
                                 contentHtml += `<div>${this.formatContent(part.text)}</div>`;
                             } else if (part.kind === 'image') {
-                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
+                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block; border: 3px solid red; background: yellow;" onload="console.log('IMAGE LOADED!')" onerror="console.log('IMAGE ERROR!')">`;
                             }
                         }
                         if (!contentHtml) contentHtml = '<div></div>';
@@ -1590,7 +1590,7 @@ class DesignRatingApp {
                         const { imgSrc, strippedText } = this.extractImageFromContent(msg.content || '');
                         if (imgSrc) {
                             const safeText = this.escapeHtml(strippedText);
-                            contentHtml = `${safeText ? `<div>${safeText}</div>` : ''}<img src="${imgSrc}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
+                            contentHtml = `${safeText ? `<div>${safeText}</div>` : ''}<img src="${imgSrc}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block; border: 3px solid red; background: yellow;" onload="console.log('IMAGE LOADED!')" onerror="console.log('IMAGE ERROR!')">`;
                         } else {
                             contentHtml = this.formatContent(msg.content || '');
                         }
