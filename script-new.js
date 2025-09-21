@@ -1632,10 +1632,12 @@ class DesignRatingApp {
             console.log('[CHAT] Generated historyHTML:', historyHTML);
             console.log('[CHAT] historyHTML length:', historyHTML.length);
             
-            // Just put the HTML directly in the container
+            // Put HTML in the content div, not the container
+            chatResultsContent.innerHTML = historyHTML;
+            
+            // Set container styling
             const chatResultsContainer = document.getElementById('chatResultsContainer');
             if (chatResultsContainer) {
-                chatResultsContainer.innerHTML = historyHTML;
                 chatResultsContainer.style.height = '500px';
                 chatResultsContainer.style.overflow = 'auto';
                 chatResultsContainer.style.padding = '16px';
