@@ -1600,7 +1600,8 @@ class DesignRatingApp {
                                 contentHtml += `<div>${this.formatContent(part.text)}</div>`;
                             } else if (part.kind === 'image' && part.src?.startsWith('data:image/')) {
                                 console.log('[IMAGE] Rendering contentParts base64 image:', part.src.substring(0, 50) + '...');
-                                contentHtml += `<div style="margin: 10px 0; padding: 10px; border: 2px solid #007bff; background: #f0f8ff;"><img src="${part.src}" alt="image" style="max-width: 100%; height: auto; display: block;"></div>`;
+                                console.log('[IMAGE] Full base64 length:', part.src.length);
+                                contentHtml += `<div style="margin: 10px 0; padding: 10px; border: 2px solid #007bff; background: #f0f8ff;"><img src="${part.src}" alt="image" style="max-width: 100%; height: auto; display: block;" onload="console.log('Image loaded successfully')" onerror="console.log('Image failed to load')"></div>`;
                             }
                         }
                         if (!contentHtml) contentHtml = '<div></div>';
@@ -1633,7 +1634,10 @@ class DesignRatingApp {
             console.log('[CHAT] historyHTML length:', historyHTML.length);
             
             // Put HTML in the content div, not the container
-            chatResultsContent.innerHTML = historyHTML;
+            // Add a test image first
+            const testImage = '<div style="margin: 10px 0; padding: 10px; border: 2px solid #ff0000; background: #ffeeee;"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzAwN2JmZiIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPlRFU1Q8L3RleHQ+PC9zdmc+" alt="test" style="max-width: 100%; height: auto; display: block;"></div>';
+            
+            chatResultsContent.innerHTML = testImage + historyHTML;
             
             // Set container styling
             const chatResultsContainer = document.getElementById('chatResultsContainer');
