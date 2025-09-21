@@ -3848,9 +3848,10 @@ Product: E-commerce App | Industry: Retail | Platform: Web
 
     // Refresh conversations in the history drawer
     async refreshConversationsIntoDrawer() {
+        console.debug('[HISTORY] refreshConversationsIntoDrawer called');
         try {
-            const conversations = await this.loadConversations();
-            this.renderHistoryDrawer(conversations);
+            // Call the async renderHistoryDrawer function that loads conversations itself
+            await this.renderHistoryDrawer();
         } catch (error) {
             console.error('[HISTORY] Error refreshing conversations:', error);
             const historyList = document.getElementById('historyDrawerList');
