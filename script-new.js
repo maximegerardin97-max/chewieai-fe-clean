@@ -1577,20 +1577,35 @@ class DesignRatingApp {
                     const role = msg.role || '';
                     const isUser = role === 'user';
                     let contentHtml = '';
-                    if (Array.isArray(msg.contentParts)) {
+                    
+                    // Handle array content (new format)
+                    if (Array.isArray(msg.content)) {
+                        for (const part of msg.content) {
+                            if (part.type === 'text') {
+                                contentHtml += `<div>${this.formatContent(part.text)}</div>`;
+                            } else if (part.type === 'image_url' && part.image_url?.url?.startsWith('data:image/')) {
+                                contentHtml += `<img src="${part.image_url.url}" alt="image" style="max-width: 100%; height: auto; margin: 8px 0; border-radius: 8px; display:block;">`;
+                            }
+                        }
+                        if (!contentHtml) contentHtml = '<div></div>';
+                    }
+                    // Handle contentParts (old format)
+                    else if (Array.isArray(msg.contentParts)) {
                         for (const part of msg.contentParts) {
                             if (part.kind === 'text') {
                                 contentHtml += `<div>${this.formatContent(part.text)}</div>`;
                             } else if (part.kind === 'image') {
-                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
+                                contentHtml += `<img src="${part.src}" alt="image" style="max-width: 100%; height: auto; margin: 8px 0; border-radius: 8px; display:block;">`;
                             }
                         }
                         if (!contentHtml) contentHtml = '<div></div>';
-                    } else {
+                    } 
+                    // Handle string content with base64 images
+                    else {
                         const { imgSrc, strippedText } = this.extractImageFromContent(msg.content || '');
                         if (imgSrc) {
                             const safeText = this.escapeHtml(strippedText);
-                            contentHtml = `${safeText ? `<div>${safeText}</div>` : ''}<img src="${imgSrc}" alt="image" style="max-width: 260px; border-radius: 10px; margin-top: 8px; display:block;">`;
+                            contentHtml = `${safeText ? `<div>${safeText}</div>` : ''}<img src="${imgSrc}" alt="image" style="max-width: 100%; height: auto; margin: 8px 0; border-radius: 8px; display:block;">`;
                         } else {
                             contentHtml = this.formatContent(msg.content || '');
                         }
@@ -1616,72 +1631,43 @@ class DesignRatingApp {
                 <div class="chat-history-container">
                     <div class="chat-history-content">
                         ${historyHTML}
-                        <!-- TEST IMAGE -->
-                        <div style="border: 2px solid red; padding: 10px; margin: 10px;">
-                            <p>TEST IMAGE:</p>
-                            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iYmx1ZSIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VEVTVDwvdGV4dD48L3N2Zz4=" alt="test" style="width: 100px; height: 100px; border: 2px solid green;">
-                        </div>
                     </div>
                 </div>
             `;
             
-            // Force container to have proper dimensions
-            chatResultsContent.style.display = 'block';
-            chatResultsContent.style.visibility = 'visible';
-            chatResultsContent.style.height = '500px';
-            chatResultsContent.style.minHeight = '500px';
-            chatResultsContent.style.width = '100%';
-            chatResultsContent.style.overflow = 'auto';
-            
+            // Force visibility with aggressive styling
+            chatResultsContent.style.setProperty('display', 'block', 'important');
+            chatResultsContent.style.setProperty('visibility', 'visible', 'important');
+            chatResultsContent.style.setProperty('height', 'auto', 'important');
+            chatResultsContent.style.setProperty('min-height', '400px', 'important');
+            chatResultsContent.style.setProperty('max-height', 'none', 'important');
+            chatResultsContent.style.setProperty('overflow', 'visible', 'important');
+            chatResultsContent.style.setProperty('width', '100%', 'important');
+            chatResultsContent.style.setProperty('position', 'relative', 'important');
+            chatResultsContent.style.setProperty('z-index', '999', 'important');
+            chatResultsContent.style.setProperty('padding', '20px', 'important');
+            chatResultsContent.style.setProperty('box-sizing', 'border-box', 'important');
+
             // Also force the parent container
             const chatResultsContainer = document.getElementById('chatResultsContainer');
             if (chatResultsContainer) {
-                chatResultsContainer.style.height = '500px';
-                chatResultsContainer.style.minHeight = '500px';
-                chatResultsContainer.style.width = '100%';
-                chatResultsContainer.style.overflow = 'auto';
+                chatResultsContainer.style.setProperty('display', 'block', 'important');
+                chatResultsContainer.style.setProperty('height', 'auto', 'important');
+                chatResultsContainer.style.setProperty('min-height', '400px', 'important');
+                chatResultsContainer.style.setProperty('overflow', 'visible', 'important');
+                chatResultsContainer.style.setProperty('padding', '20px', 'important');
+                chatResultsContainer.style.setProperty('box-sizing', 'border-box', 'important');
             }
-            
-            // Debug: Check if images are in the DOM
+            // Force a reflow and check dimensions after a short delay
             setTimeout(() => {
-                console.log('[DEBUG] Container after timeout:', {
-                    height: chatResultsContent.offsetHeight,
-                    width: chatResultsContent.offsetWidth,
-                    innerHTML: chatResultsContent.innerHTML.substring(0, 500) + '...'
-                });
-                
-                const images = chatResultsContent.querySelectorAll('img');
-                console.log('[DEBUG] Found', images.length, 'images in DOM');
-                images.forEach((img, i) => {
-                    console.log(`[DEBUG] Image ${i}:`, {
-                        src: img.src.substring(0, 50) + '...',
-                        width: img.offsetWidth,
-                        height: img.offsetHeight,
-                        display: img.style.display,
-                        visible: img.offsetWidth > 0 && img.offsetHeight > 0,
-                        parentElement: img.parentElement?.tagName,
-                        parentHeight: img.parentElement?.offsetHeight
-                    });
-                });
-                
-                // Force show the container with even more aggressive styling
+                // If still collapsed, force it with even more aggressive styling
                 if (chatResultsContent.offsetHeight === 0) {
-                    console.log('[DEBUG] Container still 0 height, forcing with !important');
-                    chatResultsContent.style.setProperty('height', '600px', 'important');
-                    chatResultsContent.style.setProperty('min-height', '600px', 'important');
-                    chatResultsContent.style.setProperty('display', 'block', 'important');
-                    chatResultsContent.style.setProperty('visibility', 'visible', 'important');
-                    chatResultsContent.style.setProperty('position', 'relative', 'important');
-                    chatResultsContent.style.setProperty('z-index', '999', 'important');
+                    chatResultsContent.style.setProperty('height', '500px', 'important');
+                    chatResultsContent.style.setProperty('min-height', '500px', 'important');
+                    chatResultsContent.style.setProperty('display', 'flex', 'important');
+                    chatResultsContent.style.setProperty('flex-direction', 'column', 'important');
                 }
-            }, 1000);
-            
-            console.log('[CHAT] Container dimensions after fix:', {
-                height: chatResultsContent.offsetHeight,
-                width: chatResultsContent.offsetWidth,
-                parentHeight: chatResultsContainer?.offsetHeight,
-                parentWidth: chatResultsContainer?.offsetWidth
-            });
+            }, 100);
             console.log('[CHAT] chatResultsContent parent:', chatResultsContent.parentElement);
             
             // FORCE SHOW THE CHAT UI
