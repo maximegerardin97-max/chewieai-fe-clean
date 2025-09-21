@@ -3916,8 +3916,8 @@ Product: E-commerce App | Industry: Retail | Platform: Web
                 });
             });
         } else {
-            // Load conversations if not provided
-            this.refreshConversationsIntoDrawer();
+            // No conversations provided, show empty state
+            historyList.innerHTML = '<div style="padding:12px;color:#94a3b8;">No conversations yet</div>';
         }
     }
 
