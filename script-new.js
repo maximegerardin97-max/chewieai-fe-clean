@@ -1632,26 +1632,14 @@ class DesignRatingApp {
             console.log('[CHAT] Generated historyHTML:', historyHTML);
             console.log('[CHAT] historyHTML length:', historyHTML.length);
             
-            chatResultsContent.innerHTML = historyHTML;
-            
-            // Set proper container styling for scrolling
+            // Just put the HTML directly in the container
             const chatResultsContainer = document.getElementById('chatResultsContainer');
             if (chatResultsContainer) {
+                chatResultsContainer.innerHTML = historyHTML;
                 chatResultsContainer.style.height = '500px';
-                chatResultsContainer.style.minHeight = '500px';
-                chatResultsContainer.style.maxHeight = '500px';
                 chatResultsContainer.style.overflow = 'auto';
-                chatResultsContainer.style.width = '100%';
                 chatResultsContainer.style.padding = '16px';
-                chatResultsContainer.style.boxSizing = 'border-box';
             }
-            
-            // Set content styling
-            chatResultsContent.style.height = '100%';
-            chatResultsContent.style.overflow = 'visible';
-            chatResultsContent.style.padding = '0';
-            chatResultsContent.style.display = 'block';
-            chatResultsContent.style.visibility = 'visible';
             
             // Force show the container
             setTimeout(() => {
