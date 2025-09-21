@@ -1283,10 +1283,26 @@ class DesignRatingApp {
             this.chatMemory = [];
             this.mainChatHistory = [];
             
-            messages.forEach(msg => {
+            messages.forEach((msg, index) => {
+                console.log(`[CONV] Processing message ${index}:`, {
+                    role: msg.role,
+                    content: msg.content,
+                    message: msg.message,
+                    id: msg.id,
+                    is_final: msg.is_final
+                });
+                
                 const role = (msg.role || '').toLowerCase();
                 const raw = (msg.content !== undefined ? msg.content : msg.message);
                 const value = (raw && typeof raw === 'object' && raw.value !== undefined) ? raw.value : raw;
+                
+                console.log(`[CONV] Processed message ${index}:`, {
+                    role,
+                    raw,
+                    value,
+                    isArray: Array.isArray(value),
+                    type: typeof value
+                });
                 
                 if (Array.isArray(value)) {
                     const parts = [];
