@@ -3741,7 +3741,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
 
             const data = await resp.json();
             console.log('[CONVERSATIONS] Loaded conversations:', data);
-            return data;
+            return data.conversations || [];
         } catch (error) {
             console.error('[CONVERSATIONS] Error loading conversations:', error);
             throw error;
