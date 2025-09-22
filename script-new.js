@@ -1272,7 +1272,8 @@ class DesignRatingApp {
     
     getConversationDisplayTitle(conv) {
         const raw = (conv && conv.title) ? String(conv.title).trim() : '';
-        if (raw) return raw;
+        // Treat backend default placeholder as missing
+        if (raw && !/^new\s+conversation$/i.test(raw)) return raw;
         const ts = new Date(conv.updated_at || conv.created_at || Date.now());
         const date = ts.toLocaleDateString();
         const time = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
