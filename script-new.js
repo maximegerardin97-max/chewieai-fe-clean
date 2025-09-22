@@ -3850,7 +3850,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
     async refreshConversationsIntoDrawer() {
         try {
             const conversations = await this.loadConversations();
-            this.renderHistoryDrawer(conversations);
+            this.renderHistoryDrawerWithData(conversations);
         } catch (error) {
             console.error('[HISTORY] Error refreshing conversations:', error);
             const historyList = document.getElementById('historyDrawerList');
@@ -3878,8 +3878,8 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         }
     }
 
-    // Render the history drawer with conversations
-    renderHistoryDrawer(conversations = null) {
+    // Render the history drawer with conversations (data provided)
+    renderHistoryDrawerWithData(conversations = null) {
         const historyList = document.getElementById('historyDrawerList');
         if (!historyList) {
             console.error('[HISTORY] historyDrawerList element not found');
@@ -3893,7 +3893,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
             type: typeof conversations
         });
 
-        if (conversations && Array.isArray(conversations) && conversations.length > 0) {
+        if (Array.isArray(conversations) && conversations.length > 0) {
 
             const conversationsHTML = conversations.map(conv => `
                 <div class="history-item" data-conversation-id="${conv.id}" style="padding: 8px; border-bottom: 1px solid #eee; cursor: pointer;">
