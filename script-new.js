@@ -3849,8 +3849,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
     // Refresh conversations in the history drawer
     async refreshConversationsIntoDrawer() {
         try {
-            const conversations = await this.loadConversations();
-            this.renderHistoryDrawerWithData(conversations);
+            await this.renderHistoryDrawer();
         } catch (error) {
             console.error('[HISTORY] Error refreshing conversations:', error);
             const historyList = document.getElementById('historyDrawerList');
@@ -3878,48 +3877,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         }
     }
 
-    // Render the history drawer with conversations (data provided)
-    renderHistoryDrawerWithData(conversations = null) {
-        const historyList = document.getElementById('historyDrawerList');
-        if (!historyList) {
-            console.error('[HISTORY] historyDrawerList element not found');
-            return;
-        }
-
-        console.debug('[HISTORY] renderHistoryDrawer called with:', { 
-            conversations, 
-            length: conversations?.length, 
-            isArray: Array.isArray(conversations),
-            type: typeof conversations
-        });
-
-        if (Array.isArray(conversations) && conversations.length > 0) {
-
-            const conversationsHTML = conversations.map(conv => `
-                <div class="history-item" data-conversation-id="${conv.id}" style="padding: 8px; border-bottom: 1px solid #eee; cursor: pointer;">
-                    <div style="font-weight: bold;">${conv.title || 'Untitled'}</div>
-                    <div style="font-size: 12px; color: #666;">${new Date(conv.created_at).toLocaleDateString()}</div>
-                </div>
-            `).join('');
-
-            historyList.innerHTML = conversationsHTML;
-
-            // Add click listeners to conversation items
-            historyList.querySelectorAll('.history-item').forEach(item => {
-                item.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const conversationId = item.dataset.conversationId;
-                    console.log('[HISTORY] Clicked conversation:', conversationId);
-                    this.loadConversation(conversationId);
-                    this.toggleHistoryDrawer(false);
-                });
-            });
-        } else {
-            // No conversations provided, show empty state
-            historyList.innerHTML = '<div style="padding:12px;color:#94a3b8;">No conversations yet</div>';
-        }
-    }
+    // Remove parameterized renderer to avoid wrong-arg calls
 
     // Create a new conversation
     async createConversation() {
