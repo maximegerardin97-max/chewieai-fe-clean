@@ -936,8 +936,8 @@ class DesignRatingApp {
             
             const historyHTML = conversations.map(conv => `
                 <div class="conversation-item" style="padding: 8px; border: 1px solid #ddd; margin: 4px 0; border-radius: 4px; cursor: pointer;" onclick="app.loadConversation('${conv.id}')">
-                    <div style="font-weight: bold;">${conv.title || 'Untitled'}</div>
-                    <div style="font-size: 12px; color: #666;">${new Date(conv.updated_at).toLocaleString()}</div>
+                    <div style="font-weight: bold;">${this.escapeHtml(this.getConversationDisplayTitle(conv))}</div>
+                    <div style="font-size: 12px; color: #666;">${new Date(conv.updated_at || conv.created_at).toLocaleString()}</div>
                 </div>
             `).join('');
             
