@@ -1683,9 +1683,7 @@ class DesignRatingApp {
             
             // Put HTML in the content div, not the container
             // Add a test image first
-            const testImage = '<div style="margin: 10px 0; padding: 10px; border: 2px solid #ff0000; background: #ffeeee;"><img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iIzAwN2JmZiIvPjx0ZXh0IHg9IjUwIiB5PSI1MCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPlRFU1Q8L3RleHQ+PC9zdmc+" alt="test" style="max-width: 100%; height: auto; display: block;"></div>';
-            
-            chatResultsContent.innerHTML = testImage + historyHTML;
+            chatResultsContent.innerHTML = historyHTML;
             
             // Set container styling
             const chatResultsContainer = document.getElementById('chatResultsContainer');
