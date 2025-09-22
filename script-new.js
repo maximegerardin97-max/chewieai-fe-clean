@@ -1697,22 +1697,13 @@ class DesignRatingApp {
             
             // Force show the container
             setTimeout(() => {
-                // console.log('[DEBUG] Container after render:', {
-                    height: chatResultsContainer.offsetHeight,
-                    width: chatResultsContainer.offsetWidth,
-                    innerHTML: chatResultsContent.innerHTML.substring(0, 200) + '...'
-                });
+                // debug removed
                 
                 // Check if images are in DOM
                 const images = chatResultsContent.querySelectorAll('img');
                 // console.log('[DEBUG] Found', images.length, 'images in DOM');
                 images.forEach((img, i) => {
-                    // console.log(`[DEBUG] Image ${i}:`, {
-                        src: img.src.substring(0, 50) + '...',
-                        style: img.style.cssText,
-                        offsetHeight: img.offsetHeight,
-                        offsetWidth: img.offsetWidth
-                    });
+                    // debug removed per image
                 });
             }, 100);
             // Force a reflow and check dimensions after a short delay
