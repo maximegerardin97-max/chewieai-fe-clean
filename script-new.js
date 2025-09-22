@@ -3785,29 +3785,36 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         }
     }
 
-    // Load conversations from database
+    // Load conversations from Supabase for current user
     async loadConversations() {
         if (!this.accessToken) {
             throw new Error('Not authenticated');
         }
 
-        try {
-            const resp = await fetch(`${this.backendUrl}/conversations`, {
-                method: 'GET',
-                headers: this.getAuthHeaders()
-            });
+        // Ensure we have the current user from Supabase auth
+        const { data: { user }, error: userError } = await this.supabaseClient.auth.getUser();
+        if (userError) {
+            console.error('[CONVERSATIONS] getUser error:', userError);
+            throw userError;
+        }
+        if (!user) {
+            throw new Error('User not authenticated');
+        }
 
-            if (!resp.ok) {
-                throw new Error(`Failed to load conversations: ${resp.status}`);
-            }
+        // Query conversations belonging to the user
+        const { data: conversations, error } = await this.supabaseClient
+            .from('conversations')
+            .select('id, title, page_name, updated_at, created_at')
+            .eq('user_id', user.id)
+            .order('updated_at', { ascending: false });
 
-            const data = await resp.json();
-            console.log('[CONVERSATIONS] Loaded conversations:', data);
-            return data.conversations || [];
-        } catch (error) {
-            console.error('[CONVERSATIONS] Error loading conversations:', error);
+        if (error) {
+            console.error('[CONVERSATIONS] Supabase error:', error);
             throw error;
         }
+
+        console.log('[CONVERSATIONS] Loaded conversations:', conversations?.length);
+        return conversations || [];
     }
 
     // Load messages for a conversation
