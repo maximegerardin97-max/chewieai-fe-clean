@@ -1008,7 +1008,7 @@ class DesignRatingApp {
             }
             const currentId = this.currentConversationId;
             const html = conversations.map(c => {
-                const title = (c.title && String(c.title).trim()) || '(no title yet)';
+                const title = this.getConversationDisplayTitle(c);
                 const active = currentId && c.id === currentId;
                 return `
                     <div data-conv-id="${c.id}" class="hist-item${active ? ' active' : ''}" style="padding:10px 12px;cursor:pointer;border-bottom:1px solid #1f2937;${active ? 'background:#111827;' : ''}">
