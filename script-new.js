@@ -1276,7 +1276,7 @@ class DesignRatingApp {
         const ts = new Date(conv.updated_at || conv.created_at || Date.now());
         const date = ts.toLocaleDateString();
         const time = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        return `New conversation • ${date} ${time}`;
+        return `${date} ${time}`;
     }
     
     async loadConversation(conversationId) {
@@ -3887,6 +3887,12 @@ Product: E-commerce App | Industry: Retail | Platform: Web
 
         if (show) {
             historyDrawer.style.display = 'block';
+            // ensure scrolling is enabled on the list container
+            const list = document.getElementById('historyDrawerList');
+            if (list) {
+                list.style.overflowY = 'auto';
+                list.style.maxHeight = 'calc(100vh - 120px)';
+            }
             this.refreshConversationsIntoDrawer();
         } else {
             historyDrawer.style.display = 'none';
