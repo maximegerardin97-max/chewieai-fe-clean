@@ -975,7 +975,7 @@ class DesignRatingApp {
             }
             list.innerHTML = conversations.map(conv => `
                 <div class="history-conv-item" data-id="${conv.id}" style="padding:12px 14px;border-bottom:1px solid #111827;cursor:pointer;${conv.id===this.currentConversationId?'background:#1f2937;border-left:3px solid #60a5fa;':''}">
-                    <div style="font-size:14px;color:#e5e7eb;">${this.escapeHtml(conv.title || this.generateTitleFromMessage('') || 'Untitled conversation')}</div>
+                    <div style="font-size:14px;color:#e5e7eb;">${this.escapeHtml(this.getConversationDisplayTitle(conv))}</div>
                     <div style="font-size:12px;color:#94a3b8;margin-top:2px;">${new Date(conv.updated_at||conv.created_at).toLocaleString()}</div>
                 </div>
             `).join('');
@@ -1268,6 +1268,15 @@ class DesignRatingApp {
 
     escapeHtml(str) {
         return String(str||'').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[s]));
+    }
+    
+    getConversationDisplayTitle(conv) {
+        const raw = (conv && conv.title) ? String(conv.title).trim() : '';
+        if (raw) return raw;
+        const ts = new Date(conv.updated_at || conv.created_at || Date.now());
+        const date = ts.toLocaleDateString();
+        const time = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return `New conversation • ${date} ${time}`;
     }
     
     async loadConversation(conversationId) {
