@@ -267,9 +267,9 @@ class DesignRatingApp {
         if (!this.accessToken) {
             throw new Error('Not authenticated');
         }
-        console.log('[AUTH] Using token:', this.accessToken.substring(0, 20) + '...');
-        console.log('[AUTH] Token length:', this.accessToken.length);
-        console.log('[AUTH] Token starts with:', this.accessToken.substring(0, 10));
+        // console.log('[AUTH] Using token:', this.accessToken.substring(0, 20) + '...');
+        // console.log('[AUTH] Token length:', this.accessToken.length);
+        // console.log('[AUTH] Token starts with:', this.accessToken.substring(0, 10));
         return {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${this.accessToken}`
@@ -663,14 +663,14 @@ class DesignRatingApp {
         const listEl = document.getElementById('historyDrawerList');
         const openDrawer = () => {
             if (!drawer) return;
-            console.debug('[HISTORY] openDrawer');
+            // console.debug('[HISTORY] openDrawer');
             drawer.style.transform = 'translateX(0)';
             drawer.setAttribute('aria-hidden', 'false');
             this.renderHistoryDrawer();
         };
         const closeDrawer = () => {
             if (!drawer) return;
-            console.debug('[HISTORY] closeDrawer');
+            // console.debug('[HISTORY] closeDrawer');
             drawer.style.transform = 'translateX(-100%)';
             drawer.setAttribute('aria-hidden', 'true');
             // Move focus away to avoid aria-hidden focus warnings
@@ -696,13 +696,13 @@ class DesignRatingApp {
                 if (now - lastClickAt < 300) return; // debounce rapid clicks
                 lastClickAt = now;
                 if (this._loadingConversation) {
-                    console.debug('[HISTORY] ignoring click while loading');
+                    // console.debug('[HISTORY] ignoring click while loading');
                     return;
                 }
                 const item = e.target.closest('.hist-item');
                 if (!item || !listEl.contains(item)) return;
                 const id = item.getAttribute('data-conv-id');
-                console.debug('[HISTORY] click item', { id, item, hasLoad: typeof this.loadConversation, thisOk: !!this });
+                // console.debug('[HISTORY] click item', { id, item, hasLoad: typeof this.loadConversation, thisOk: !!this });
                 if (!id) return;
                 // highlight active
                 listEl.querySelectorAll('.hist-item').forEach(n => n.classList.remove('active'));
@@ -719,13 +719,13 @@ class DesignRatingApp {
                         return;
                     }
                     await fn(id);
-                    console.debug('[HISTORY] loadConversation completed');
+                    // console.debug('[HISTORY] loadConversation completed');
                 } catch (err) {
                     console.error('history click load error', err);
                 }
             });
             listEl.__histBound = true;
-            console.debug('[HISTORY] delegation bound');
+            // console.debug('[HISTORY] delegation bound');
         }
 
         // Training Data Modal
@@ -996,13 +996,13 @@ class DesignRatingApp {
     async renderHistoryDrawer() {
         const listEl = document.getElementById('historyDrawerList');
         if (!listEl) return;
-        console.debug('[HISTORY] render start');
+        // console.debug('[HISTORY] render start');
         listEl.innerHTML = '<div style="padding:12px;color:#94a3b8;">Loading…</div>';
         try {
             const conversations = await this.loadConversations();
-            console.debug('[HISTORY] conversations', { count: conversations?.length, conversations: conversations });
+            // console.debug('[HISTORY] conversations', { count: conversations?.length, conversations: conversations });
             if (!Array.isArray(conversations) || conversations.length === 0) {
-                console.debug('[HISTORY] No conversations found');
+                // console.debug('[HISTORY] No conversations found');
                 listEl.innerHTML = '<div style="padding:12px;color:#94a3b8;">No conversations yet</div>';
                 return;
             }
@@ -1017,7 +1017,7 @@ class DesignRatingApp {
                     </div>`;
             }).join('');
             listEl.innerHTML = html;
-            console.debug('[HISTORY] render done');
+            // console.debug('[HISTORY] render done');
         } catch (e) {
             console.error('[HISTORY] render failed', e);
             listEl.innerHTML = `<div style=\"padding:12px;color:#ef4444;\">Failed to load history</div>`;
@@ -1032,7 +1032,7 @@ class DesignRatingApp {
             }
             this._loadingConversation = true;
             this._historyView = true;
-            console.log('[CONV] load start', { conversationId });
+            // console.log('[CONV] load start', { conversationId });
             this.currentConversationId = conversationId;
 
             // Prepare UI
@@ -1040,7 +1040,7 @@ class DesignRatingApp {
 
             // Load messages
             const messages = await this.loadMessages(conversationId);
-            console.log('[CONV] messages fetched', { count: messages?.length });
+            // console.log('[CONV] messages fetched', { count: messages?.length });
             try {
                 const diag = (messages || []).slice(0, 6).map(m => ({
                     role: m.role,
@@ -1051,11 +1051,11 @@ class DesignRatingApp {
                     isArray: Array.isArray(m?.content?.value),
                     arrayLen: Array.isArray(m?.content?.value) ? m.content.value.length : undefined,
                 }));
-                console.log('[CONV] diag sample', diag);
+                // console.log('[CONV] diag sample', diag);
                 const firstUser = (messages || []).find(x => (x.role||'').toLowerCase()==='user');
                 if (firstUser) {
                     const raw = firstUser.content !== undefined ? firstUser.content : firstUser.message;
-                    console.log('[CONV] firstUser raw', raw);
+                    // console.log('[CONV] firstUser raw', raw);
                 }
             } catch {}
 
@@ -1069,7 +1069,7 @@ class DesignRatingApp {
                 if (role !== 'assistant') return true;
                 return m.is_final === true || m.chunk_index == null;
             }) : [];
-            console.log('[CONV] cleaned count', { count: cleaned.length });
+            // console.log('[CONV] cleaned count', { count: cleaned.length });
 
             // Normalize and push
                 cleaned.forEach(msg => {
@@ -1144,10 +1144,10 @@ class DesignRatingApp {
             } catch {}
 
             // We render directly inside the conversation (right panel); left panel stays hidden
-            console.log('[CONV] About to call showMainChatHistory');
-            console.log('[CONV] chatMemory before showMainChatHistory:', this.chatMemory);
+            // console.log('[CONV] About to call showMainChatHistory');
+            // console.log('[CONV] chatMemory before showMainChatHistory:', this.chatMemory);
             this.showMainChatHistory();
-            console.log('[CONV] rendered main chat');
+            // console.log('[CONV] rendered main chat');
             
             // Force show the main chat area
             const floatingChat = document.getElementById('floatingChat');
@@ -1204,7 +1204,6 @@ class DesignRatingApp {
 
         } catch (error) {
             console.error('[CONV] Failed to load conversation:', error);
-            console.error('[CONV] Error stack:', error.stack);
             const chatResultsContent = document.getElementById('chatResultsContent');
             if (chatResultsContent) chatResultsContent.innerHTML = '<div class="placeholder-text">Failed to load conversation</div>';
         } finally {
@@ -1610,18 +1609,18 @@ class DesignRatingApp {
     showMainChatHistory() {
         const chatResultsContent = document.getElementById('chatResultsContent');
         if (!chatResultsContent) {
-            console.log('[CHAT] No chatResultsContent element found');
+            // console.log('[CHAT] No chatResultsContent element found');
             return;
         }
         
-        console.log('[CHAT] showMainChatHistory called');
-        console.log('[CHAT] chatMemory length:', this.chatMemory?.length);
-        console.log('[CHAT] mainChatHistory length:', this.mainChatHistory?.length);
+        // console.log('[CHAT] showMainChatHistory called');
+        // console.log('[CHAT] chatMemory length:', this.chatMemory?.length);
+        // console.log('[CHAT] mainChatHistory length:', this.mainChatHistory?.length);
         
         // Show chat memory if available (loaded conversation)
         if (this.chatMemory && this.chatMemory.length > 0) {
-            console.log('[CHAT] Rendering from chatMemory');
-            console.log('[CHAT] chatMemory data:', this.chatMemory);
+            // console.log('[CHAT] Rendering from chatMemory');
+            // console.log('[CHAT] chatMemory data:', this.chatMemory);
                 const renderItem = (msg) => {
                     const role = msg.role || '';
                     const isUser = role === 'user';
@@ -1679,8 +1678,8 @@ class DesignRatingApp {
             };
 
             const historyHTML = this.chatMemory.map(renderItem).join('');
-            console.log('[CHAT] Generated historyHTML:', historyHTML);
-            console.log('[CHAT] historyHTML length:', historyHTML.length);
+            // console.log('[CHAT] Generated historyHTML:', historyHTML);
+            // console.log('[CHAT] historyHTML length:', historyHTML.length);
             
             // Put HTML in the content div, not the container
             // Add a test image first
@@ -1698,7 +1697,7 @@ class DesignRatingApp {
             
             // Force show the container
             setTimeout(() => {
-                console.log('[DEBUG] Container after render:', {
+                // console.log('[DEBUG] Container after render:', {
                     height: chatResultsContainer.offsetHeight,
                     width: chatResultsContainer.offsetWidth,
                     innerHTML: chatResultsContent.innerHTML.substring(0, 200) + '...'
@@ -1706,9 +1705,9 @@ class DesignRatingApp {
                 
                 // Check if images are in DOM
                 const images = chatResultsContent.querySelectorAll('img');
-                console.log('[DEBUG] Found', images.length, 'images in DOM');
+                // console.log('[DEBUG] Found', images.length, 'images in DOM');
                 images.forEach((img, i) => {
-                    console.log(`[DEBUG] Image ${i}:`, {
+                    // console.log(`[DEBUG] Image ${i}:`, {
                         src: img.src.substring(0, 50) + '...',
                         style: img.style.cssText,
                         offsetHeight: img.offsetHeight,
@@ -1726,7 +1725,7 @@ class DesignRatingApp {
                     chatResultsContent.style.setProperty('flex-direction', 'column', 'important');
                 }
             }, 100);
-            console.log('[CHAT] chatResultsContent parent:', chatResultsContent.parentElement);
+            // console.log('[CHAT] chatResultsContent parent:', chatResultsContent.parentElement);
             
             // FORCE SHOW THE CHAT UI
             const floatingChat = document.getElementById('floatingChat');
@@ -1734,14 +1733,14 @@ class DesignRatingApp {
                 floatingChat.style.display = 'flex';
                 floatingChat.classList.remove('collapsed-state');
                 floatingChat.classList.add('expanded-state');
-                console.log('[CHAT] Forced floatingChat to show');
+                // console.log('[CHAT] Forced floatingChat to show');
             }
             
             // HIDE THE HISTORY DRAWER
             const historyDrawer = document.getElementById('historyDrawer');
             if (historyDrawer) {
                 historyDrawer.style.display = 'none';
-                console.log('[CHAT] Hid history drawer');
+                // console.log('[CHAT] Hid history drawer');
             }
             return;
         }
@@ -3823,7 +3822,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
             throw error;
         }
 
-        console.log('[CONVERSATIONS] Loaded conversations:', conversations?.length);
+        // console.log('[CONVERSATIONS] Loaded conversations:', conversations?.length);
         return conversations || [];
     }
 
@@ -3847,7 +3846,7 @@ Product: E-commerce App | Industry: Retail | Platform: Web
             .eq('user_id', user.id)
             .order('created_at', { ascending: true });
 
-        console.log('[MESSAGES] Supabase response:', { messages, error, type: typeof messages, isArray: Array.isArray(messages) });
+        // console.log('[MESSAGES] Supabase response:', { messages, error, type: typeof messages, isArray: Array.isArray(messages) });
 
         if (error) {
             console.error('[MESSAGES] Supabase error:', error);
@@ -3855,11 +3854,11 @@ Product: E-commerce App | Industry: Retail | Platform: Web
         }
 
         if (!messages || !Array.isArray(messages)) {
-            console.warn('[MESSAGES] No messages or not an array:', messages);
+            // console.warn('[MESSAGES] No messages or not an array:', messages);
             return [];
         }
 
-        console.log('[MESSAGES] Loaded messages for conversation:', conversationId, messages);
+        // console.log('[MESSAGES] Loaded messages for conversation:', conversationId, messages);
         return messages;
     }
 
